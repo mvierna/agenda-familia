@@ -59,10 +59,10 @@
     .marcador b { display: block; font-size: 26px; }
     /* Barra inferior */
     nav { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; display: flex; justify-content: space-around; align-items: center; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); box-shadow: 0 -2px 10px rgba(0,0,0,.08); z-index: 10; }
-    nav button { border: none; background: none; font-size: 12px; color: var(--gris); display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 60px; padding: 4px; }
+    nav button { border: none; background: none; font-size: 12px; color: var(--gris); display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; min-width: 0; padding: 4px 0; font-size: 11px; }
     nav button span { font-size: 22px; }
     nav button.on { color: var(--azul); font-weight: 700; }
-    nav .mas { background: var(--azul); color: #fff; width: 54px; height: 54px; border-radius: 18px; font-size: 30px; min-width: 0; margin-top: -22px; box-shadow: 0 4px 12px rgba(79,70,229,.4); justify-content: center; }
+    nav .mas { flex: none; background: var(--azul); color: #fff; width: 54px; height: 54px; border-radius: 18px; font-size: 30px; min-width: 0; margin-top: -22px; box-shadow: 0 4px 12px rgba(79,70,229,.4); justify-content: center; }
     /* Ventanas */
     .fondo-modal { position: fixed; inset: 0; background: rgba(15,23,42,.5); z-index: 50; display: flex; align-items: flex-end; justify-content: center; }
     .modal { background: #fff; width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto; border-radius: 22px 22px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
@@ -95,6 +95,17 @@
     .fotos { display: flex; gap: 8px; flex-wrap: wrap; }
     .fotos a, .fotos label { width: 72px; height: 72px; border-radius: 10px; background: #eef2ff; display: flex; align-items: center; justify-content: center; font-size: 28px; text-decoration: none; overflow: hidden; }
     .fotos label { background: #fff; border: 2px dashed #c7d2fe; }
+    /* Comidas */
+    .menu-dia { display: grid; grid-template-columns: 50px 1fr 1fr; gap: 6px; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; }
+    .menu-dia:last-child { border-bottom: none; }
+    .md-d { font-size: 13px; font-weight: 700; color: var(--gris); text-transform: capitalize; }
+    .menu-dia.hoy .md-d { color: var(--azul); }
+    .md-p { border: none; background: #f8fafc; border-radius: 10px; padding: 8px; font-size: 13px; text-align: left; min-height: 40px; overflow: hidden; color: var(--texto); }
+    .voto { flex: none; border: 2px solid #d1d5db; background: #fff; border-radius: 14px; padding: 6px 10px; font-size: 18px; display: flex; flex-direction: column; align-items: center; min-width: 52px; }
+    .voto.on { border-color: #22c55e; background: #dcfce7; }
+    .voto b { font-size: 14px; }
+    /* Fotos de cada uno */
+    img.cara { border-radius: 50%; object-fit: cover; vertical-align: middle; }
     /* Cuenta atrás */
     .cuenta { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: none; }
     .cta { flex: none; width: 118px; background: #fff; border-radius: 16px; padding: 10px 8px; text-align: center; border-top: 5px solid var(--c); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
@@ -119,6 +130,7 @@
     <button class="mas" onclick="nuevoSegunVista()">＋</button>
     <button data-v="examenes" onclick="ir('examenes')"><span>📝</span>Exámenes</button>
     <button data-v="tareas" onclick="ir('tareas')"><span>⭐</span>Tareas</button>
+    <button data-v="comidas" onclick="ir('comidas')"><span>🍽️</span>Comidas</button>
 </nav>
 <div id="capa-modal"></div>
 
@@ -129,7 +141,7 @@
 // pero separada del todo: su propia web y su propia hoja de Google (cuenta personal).
 // Los datos se guardan en el móvil y, si hay conexión configurada, se comparten con la hoja (Codigo.gs).
 // ==========================================
-const VERSION_APP = 1;
+const VERSION_APP = 2;
 const TIPOS = {
     deberes: ['📚', 'Deberes'], examen: ['📝', 'Examen'], actividad: ['⚽', 'Actividad'],
     medico: ['🩺', 'Médico'], cumple: ['🎂', 'Cumpleaños'], viaje: ['✈️', 'Viaje'], otro: ['📌', 'Otro']
@@ -155,8 +167,8 @@ if (!D) {
     ], eventos: [], tareas: [], examenes: [] };
     guardarLS('af_datos', D);
 }
-D.examenes = D.examenes || [];
-const TABLAS_APP = ['miembros', 'eventos', 'tareas', 'examenes'];
+D.examenes = D.examenes || []; D.comidas = D.comidas || []; D.compra = D.compra || [];
+const TABLAS_APP = ['miembros', 'eventos', 'tareas', 'examenes', 'comidas', 'compra'];
 
 // ---------- Fechas ----------
 const dos = n => String(n).padStart(2, '0');
@@ -252,6 +264,7 @@ async function sincronizar(manual) {
         pend.forEach(o => {
             const i = D[o.tabla].findIndex(x => x.id === (o.fila ? o.fila.id : o.id));
             if (o.op === 'borrar') { if (i >= 0) D[o.tabla].splice(i, 1); }
+            else if (o.op === 'votar') { if (i >= 0) { const v = lista(D[o.tabla][i].votos).filter(x => x !== o.quien); if (o.si) v.push(o.quien); D[o.tabla][i].votos = v.join(','); } }
             else if (i >= 0) D[o.tabla][i] = o.fila; else D[o.tabla].push(o.fila);
         });
         guardarLS('af_datos', D);
@@ -273,19 +286,19 @@ function ir(v) { vista = v; window.scrollTo(0, 0); pintar(); }
 function pintar() {
     document.querySelectorAll('nav [data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === vista));
     const yo = miembro(cfg.yo);
-    document.getElementById('titulo').textContent = yo ? `Hola, ${yo.nombre} ${yo.emoji}` : 'Agenda Familia';
+    document.getElementById('titulo').innerHTML = yo ? `Hola, ${esc(yo.nombre)} ${cara(yo, 30)}` : 'Agenda Familia';
     const fh = nombreDia(hoyIso()); document.getElementById('cab-fecha').textContent = fh.charAt(0).toUpperCase() + fh.slice(1);
     const v = document.getElementById('vista');
-    v.innerHTML = vista === 'hoy' ? vistaHoy() : vista === 'cal' ? vistaCalendario() : vista === 'tareas' ? vistaTareas() : vista === 'examenes' ? vistaExamenes() : vistaAjustes();
+    v.innerHTML = vista === 'hoy' ? vistaHoy() : vista === 'cal' ? vistaCalendario() : vista === 'tareas' ? vistaTareas() : vista === 'examenes' ? vistaExamenes() : vista === 'comidas' ? vistaComidas() : vistaAjustes();
 }
 function chipsFiltro() {
     return `<div class="chips"><button class="chip ${filtro ? '' : 'on'}" onclick="filtro='';pintar()">👪 Todos</button>` +
-        D.miembros.map(m => `<button class="chip ${filtro === m.id ? 'on' : ''}" style="--c:${m.color}" onclick="filtro='${m.id}';pintar()">${m.emoji} ${esc(m.nombre)}</button>`).join('') + '</div>';
+        D.miembros.map(m => `<button class="chip ${filtro === m.id ? 'on' : ''}" style="--c:${m.color}" onclick="filtro='${m.id}';pintar()">${cara(m)} ${esc(m.nombre)}</button>`).join('') + '</div>';
 }
 function itemEvento(e, fecha) {
     const ms = miembrosDe(e.quien), [em] = TIPOS[e.tipo] || TIPOS.otro, hecho = estaHecho(e, fecha);
     const color = ms.length === 1 ? ms[0].color : '#94a3b8';
-    const quien = ms.length ? ms.map(m => m.emoji + ' ' + esc(m.nombre)).join(', ') : '👪 Todos';
+    const quien = ms.length ? ms.map(m => cara(m) + ' ' + esc(m.nombre)).join(', ') : '👪 Todos';
     const anos = e.tipo === 'cumple' && e.repetir === 'anual' ? Number(fecha.slice(0, 4)) - Number(e.fecha.slice(0, 4)) : 0;
     const pr = e.esExamen ? progreso(D.examenes.find(x => x.id === e.id)) : null;
     return `<div class="item ${hecho ? 'hecho' : ''} ${IMPORTANTES.includes(e.tipo) ? 'importante' : ''}" style="border-left-color:${color}" onclick="${e.esExamen ? 'abrirExamen' : 'editarEvento'}('${e.id}')">
@@ -296,7 +309,7 @@ function itemEvento(e, fecha) {
 function itemTarea(t, fecha) {
     const m = miembro(t.quien), hecho = estaHecho(t, fecha), atrasada = (!t.repetir || t.repetir === 'una') && t.fecha < fecha && !hecho;
     return `<div class="item ${hecho ? 'hecho' : ''}" style="border-left-color:${m ? m.color : '#94a3b8'}" onclick="editarTarea('${t.id}')">
-        <div class="ico">${m ? m.emoji : '👪'}</div>
+        <div class="ico">${m ? cara(m, 30) : '👪'}</div>
         <div class="txt"><div class="tit">${esc(t.titulo)}</div><div class="sub">${m ? esc(m.nombre) : 'Cualquiera'} · ⭐ ${t.puntos || 0}${atrasada ? ' · ⏰ pendiente' : ''}</div></div>
         <button class="check" onclick="event.stopPropagation();marcar('tareas','${t.id}','${fecha}')">${hecho ? '✓' : ''}</button></div>`;
 }
@@ -320,12 +333,12 @@ function cuentaAtras() {
     return `<h2>⏳ Cuenta atrás</h2><div class="cuenta">` + items.map(i => {
         const n = Math.round((deIso(i.f) - deIso(hoy)) / 86400000), ms = miembrosDe(i.q), c = ms.length === 1 ? ms[0].color : '#4f46e5';
         return `<div class="cta" style="--c:${c}" onclick="${i.ir}"><div class="em">${i.em}</div><b>${n === 0 ? '¡HOY!' : n}</b><div class="ud">${n === 0 ? '&nbsp;' : n === 1 ? 'día' : 'días'}</div>
-            <div class="t">${esc(i.t)}</div>${ms.length === 1 ? `<div class="q">${ms[0].emoji} ${esc(ms[0].nombre)}</div>` : ''}</div>`;
+            <div class="t">${esc(i.t)}</div>${ms.length === 1 ? `<div class="q">${cara(ms[0])} ${esc(ms[0].nombre)}</div>` : ''}</div>`;
     }).join('') + `</div>`;
 }
 function vistaHoy() {
     const hoy = hoyIso();
-    let h = chipsFiltro() + cuentaAtras() + bloqueDia(hoy, 'Hoy') + bloqueDia(sumarDias(hoy, 1), 'Mañana · ' + nombreDia(sumarDias(hoy, 1)));
+    let h = chipsFiltro() + cuentaAtras() + menuHoy() + bloqueDia(hoy, 'Hoy') + bloqueDia(sumarDias(hoy, 1), 'Mañana · ' + nombreDia(sumarDias(hoy, 1)));
     const ta = tareasDe(hoy), hechas = ta.filter(t => estaHecho(t, hoy)).length;
     if (ta.length) h += `<h2>Tareas de casa · ${hechas} de ${ta.length}</h2>` + ta.map(t => itemTarea(t, hoy)).join('');
     // Lo importante de los próximos 30 días (exámenes, cumpleaños, médico)
@@ -356,23 +369,23 @@ function cambiarMes(n) { mesVista = new Date(mesVista.getFullYear(), mesVista.ge
 function vistaTareas() {
     const hoy = hoyIso(), hijos = D.miembros.filter(m => m.rol === 'hijo');
     let h = `<h2>⭐ Puntos de esta semana</h2><div class="marcador">` +
-        (hijos.length ? hijos : D.miembros).map(m => `<div style="--c:${m.color}">${m.emoji} ${esc(m.nombre)}<b>${puntosSemana(m.id)}</b></div>`).join('') + `</div>`;
+        (hijos.length ? hijos : D.miembros).map(m => `<div style="--c:${m.color}">${cara(m)} ${esc(m.nombre)}<b>${puntosSemana(m.id)}</b></div>`).join('') + `</div>`;
     h += `<h2>Hoy</h2>` + chipsFiltro();
     const ta = tareasDe(hoy);
     h += ta.length ? ta.map(t => itemTarea(t, hoy)).join('') : `<div class="vacio">No hay tareas para hoy.<br>Pulsa ＋ para crear una.</div>`;
     const todas = D.tareas.filter(pasaFiltro);
     if (todas.length) h += `<h2>Todas las tareas</h2>` + todas.map(t => {
         const m = miembro(t.quien), rep = { diaria: 'cada día', semanal: 'cada ' + DIAS[deIso(t.fecha).getDay()] }[t.repetir] || 'una vez, ' + nombreDia(t.fecha);
-        return `<div class="item" style="border-left-color:${m ? m.color : '#94a3b8'}" onclick="editarTarea('${t.id}')"><div class="ico">${m ? m.emoji : '👪'}</div><div class="txt"><div class="tit">${esc(t.titulo)}</div><div class="sub">⭐ ${t.puntos || 0} · ${rep}</div></div></div>`;
+        return `<div class="item" style="border-left-color:${m ? m.color : '#94a3b8'}" onclick="editarTarea('${t.id}')"><div class="ico">${m ? cara(m, 30) : '👪'}</div><div class="txt"><div class="tit">${esc(t.titulo)}</div><div class="sub">⭐ ${t.puntos || 0} · ${rep}</div></div></div>`;
     }).join('');
     return h;
 }
 function vistaAjustes() {
     return `<h2>¿Quién usa este móvil?</h2><div class="tarjeta"><div class="chips" style="flex-wrap:wrap">` +
-        D.miembros.map(m => `<button class="chip ${cfg.yo === m.id ? 'on' : ''}" style="--c:${m.color}" onclick="cfg.yo='${m.id}';guardarLS('af_config',cfg);pintar()">${m.emoji} ${esc(m.nombre)}</button>`).join('') +
+        D.miembros.map(m => `<button class="chip ${cfg.yo === m.id ? 'on' : ''}" style="--c:${m.color}" onclick="cfg.yo='${m.id}';guardarLS('af_config',cfg);pintar()">${cara(m)} ${esc(m.nombre)}</button>`).join('') +
         `</div><small class="ayuda">Si es un hijo/a, lo que apunte desde aquí sale a su nombre.</small></div>
         <h2>Familia</h2><div class="tarjeta">` +
-        D.miembros.map(m => `<div class="miembro" onclick="editarMiembro('${m.id}')"><div class="bola" style="background:${m.color}33">${m.emoji}</div><div style="flex:1"><b>${esc(m.nombre)}</b><div class="sub" style="font-size:13px;color:var(--gris)">${m.rol === 'hijo' ? 'Hijo/a · suma puntos' : 'Adulto'}</div></div>✏️</div>`).join('') +
+        D.miembros.map(m => `<div class="miembro" onclick="editarMiembro('${m.id}')"><div class="bola" style="background:${m.color}33">${cara(m, 38)}</div><div style="flex:1"><b>${esc(m.nombre)}</b><div class="sub" style="font-size:13px;color:var(--gris)">${m.rol === 'hijo' ? 'Hijo/a · suma puntos' : 'Adulto'}</div></div>✏️</div>`).join('') +
         `<button class="btn" style="width:100%;margin-top:10px" onclick="editarMiembro(null)">＋ Añadir a alguien</button></div>
         <h2>Compartir con la familia</h2><div class="tarjeta">
         <label class="et">Dirección de la hoja (la del script)</label><input id="cfg-url" value="${esc(cfg.url)}" placeholder="https://script.google.com/macros/s/…/exec">
@@ -399,10 +412,10 @@ function abrirModal(html) {
     document.getElementById('capa-modal').innerHTML = `<div class="fondo-modal" onclick="if(event.target===this)cerrarModal()"><div class="modal">${html}</div></div>`;
 }
 function cerrarModal() { document.getElementById('capa-modal').innerHTML = ''; pintar(); }
-function nuevoSegunVista() { if (vista === 'examenes') nuevoExamen(); else if (vista === 'tareas') editarTarea(null); else editarEvento(null, vista === 'cal' ? diaSel : hoyIso()); }
+function nuevoSegunVista() { if (vista === 'comidas') editarPlato(null); else if (vista === 'examenes') nuevoExamen(); else if (vista === 'tareas') editarTarea(null); else editarEvento(null, vista === 'cal' ? diaSel : hoyIso()); }
 function chipsQuien(sel, multiple) {
     return `<div class="chips" style="flex-wrap:wrap" id="quien">` + (multiple ? `<button type="button" class="chip ${sel.length ? '' : 'on'}" data-id="" onclick="elegirQuien(this,true)">👪 Todos</button>` : '') +
-        D.miembros.map(m => `<button type="button" class="chip ${sel.includes(m.id) ? 'on' : ''}" style="--c:${m.color}" data-id="${m.id}" onclick="elegirQuien(this,${multiple})">${m.emoji} ${esc(m.nombre)}</button>`).join('') + `</div>`;
+        D.miembros.map(m => `<button type="button" class="chip ${sel.includes(m.id) ? 'on' : ''}" style="--c:${m.color}" data-id="${m.id}" onclick="elegirQuien(this,${multiple})">${cara(m)} ${esc(m.nombre)}</button>`).join('') + `</div>`;
 }
 function elegirQuien(b, multiple) {
     const todos = [...document.querySelectorAll('#quien .chip')];
@@ -610,9 +623,18 @@ function guardarTarea(id) {
 
 const EMOJIS = ['👨', '👩', '🧒', '👦', '👧', '🧑', '👴', '👵', '🐶', '🐱', '⚽', '🎨', '🎮', '🦄', '🚀', '🌟'];
 function editarMiembro(id) {
+    fotoMiembro = undefined; recorte = null;
     const m = id ? miembro(id) : { id: '', nombre: '', emoji: '🧒', color: COLORES[D.miembros.length % COLORES.length], rol: 'hijo' };
     abrirModal(`<h3>${id ? '✏️ ' + esc(m.nombre) : '＋ Añadir a la familia'}</h3>
         <label class="et">Nombre</label><input id="mi-nombre" value="${esc(m.nombre)}" placeholder="Nombre">
+        <label class="et">Foto (opcional)</label>
+        <div style="display:flex;gap:10px;align-items:center"><div class="bola" style="width:56px;height:56px;font-size:30px;background:#eef2ff">${m.foto ? cara(m, 56) : esc(m.emoji)}</div>
+            <label class="btn" style="flex:1;text-align:center">📷 Elegir foto<input type="file" accept="image/*" style="display:none" onchange="elegirFotoMiembro(this.files[0])"></label>
+            ${m.foto ? `<button class="btn" style="flex:none" onclick="fotoMiembro='';this.textContent='✓ Quitada'">Quitar</button>` : ''}</div>
+        <div id="mi-recorte" style="display:none"><div id="rc-marco" onpointerdown="moverRecorte(event)" style="width:200px;height:200px;border-radius:50%;overflow:hidden;position:relative;margin:12px auto 6px;touch-action:none;background:#eee">
+            <img id="rc-img" alt="" style="position:absolute;max-width:none;user-select:none;pointer-events:none"></div>
+            <input type="range" id="rc-zoom" min="1" max="4" step="0.05" value="1" oninput="zoomRecorte(+this.value)" style="padding:0">
+            <small class="ayuda">Arrastra la foto para centrar la cara y usa la barra para acercarla.</small></div>
         <label class="et">Curso (lo usa la IA)</label><input id="mi-curso" value="${esc(m.curso || '')}" placeholder="1º ESO">
         <label class="et">Dibujo</label><div class="chips" style="flex-wrap:wrap" id="mi-emoji">${EMOJIS.map(e => `<button type="button" class="chip ${m.emoji === e ? 'on' : ''}" onclick="document.querySelectorAll('#mi-emoji .chip').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${e}</button>`).join('')}</div>
         <label class="et">Color</label><div class="chips" style="flex-wrap:wrap" id="mi-color">${COLORES.map(c => `<button type="button" class="chip ${m.color === c ? 'on' : ''}" data-c="${c}" style="--c:${c};width:40px;height:40px;background:${c}" onclick="document.querySelectorAll('#mi-color .chip').forEach(x=>x.classList.remove('on'));this.classList.add('on')"></button>`).join('')}</div>
@@ -624,7 +646,8 @@ function guardarMiembro(id) {
     const nombre = document.getElementById('mi-nombre').value.trim();
     if (!nombre) { avisar('✍️ Escribe el nombre'); return; }
     guardar('miembros', { id: id || nuevoId(), nombre, emoji: document.querySelector('#mi-emoji .chip.on')?.textContent || '🙂',
-        color: document.querySelector('#mi-color .chip.on')?.dataset.c || COLORES[0], rol: document.getElementById('mi-rol').value, curso: val('mi-curso') });
+        color: document.querySelector('#mi-color .chip.on')?.dataset.c || COLORES[0], rol: document.getElementById('mi-rol').value, curso: val('mi-curso'),
+        foto: recorte ? fotoRecortada() : fotoMiembro !== undefined ? fotoMiembro : ((id && miembro(id)?.foto) || '') });
     cerrarModal();
 }
 
@@ -654,7 +677,7 @@ function itemPaso({ x, p, i, hecho }, fecha) {
     const m = miembro(x.quien), atrasado = p.f < fecha && !hecho;
     return `<div class="item ${hecho ? 'hecho' : ''}" style="border-left-color:${m ? m.color : '#94a3b8'}" onclick="abrirExamen('${x.id}')">
         <div class="ico">📖</div>
-        <div class="txt"><div class="tit">${esc(p.t)}</div><div class="sub">${esc(x.asignatura)}${m ? ' · ' + m.emoji + ' ' + esc(m.nombre) : ''}${atrasado ? ' · ⏰ era del ' + nombreDia(p.f).split(' de ')[0] : ''}</div></div>
+        <div class="txt"><div class="tit">${esc(p.t)}</div><div class="sub">${esc(x.asignatura)}${m ? ' · ' + cara(m) + ' ' + esc(m.nombre) : ''}${atrasado ? ' · ⏰ era del ' + nombreDia(p.f).split(' de ')[0] : ''}</div></div>
         <button class="check" onclick="event.stopPropagation();marcarPaso('${x.id}',${i})">${hecho ? '✓' : ''}</button></div>`;
 }
 
@@ -691,7 +714,7 @@ function vistaExamenes() {
         const cuando = dias === 0 ? '¡HOY!' : dias === 1 ? 'Mañana' : dias > 1 ? 'Faltan ' + dias + ' días' : (x.nota ? 'Nota: ' + esc(x.nota) : '');
         return `<div class="item ${dias >= 0 ? 'importante' : ''}" style="border-left-color:${m ? m.color : '#94a3b8'};display:block" onclick="abrirExamen('${x.id}')">
             <div style="display:flex;gap:10px;align-items:center"><div class="ico">📝</div>
-            <div class="txt"><div class="tit">${esc(x.asignatura)}</div><div class="sub">${m ? m.emoji + ' ' + esc(m.nombre) + ' · ' : ''}${nombreDia(x.fecha)}</div></div>
+            <div class="txt"><div class="tit">${esc(x.asignatura)}</div><div class="sub">${m ? cara(m) + ' ' + esc(m.nombre) + ' · ' : ''}${nombreDia(x.fecha)}</div></div>
             <b style="color:${dias >= 0 && dias <= 3 ? '#dc2626' : 'var(--azul)'};font-size:14px;text-align:right">${cuando}</b></div>
             ${dias < 0 ? '' : pr.total ? `<div class="barra"><i style="width:${Math.round(pr.hechos * 100 / pr.total)}%"></i></div><div class="sub" style="margin-top:4px">${pr.hechos} de ${pr.total} pasos · ${pr.atrasados ? '⚠️ ' + pr.atrasados + ' atrasados' : '✅ va al día'}</div>`
                 : '<div class="sub" style="margin-top:6px">Sin plan de estudio: tócalo para hacerlo</div>'}</div>`;
@@ -738,7 +761,7 @@ function pintarExamen(id) {
         const hecho = h.includes(String(i));
         planHtml += `<div class="paso ${hecho ? 'hecho' : ''}"><button class="check" onclick="marcarPaso('${x.id}',${i})">${hecho ? '✓' : ''}</button><span style="flex:1" onclick="cambiarPaso('${x.id}',${i})">${esc(p.t)}</span></div>`;
     });
-    cont.innerHTML = `<h3>📝 ${esc(x.asignatura)}${m ? ' · ' + m.emoji + ' ' + esc(m.nombre) : ''}</h3>
+    cont.innerHTML = `<h3>📝 ${esc(x.asignatura)}${m ? ' · ' + cara(m) + ' ' + esc(m.nombre) : ''}</h3>
         <div style="color:var(--gris);font-size:14px">${nombreDia(x.fecha)}${x.hora ? ' a las ' + x.hora : ''} · ${dias > 1 ? 'faltan ' + dias + ' días' : dias === 1 ? 'es mañana' : dias === 0 ? '¡es hoy!' : 'ya pasó'}</div>
         ${pr.total ? `<div class="barra" style="height:12px"><i style="width:${Math.round(pr.hechos * 100 / pr.total)}%"></i></div><div style="margin-top:5px;font-size:14px;color:var(--gris)">${pr.hechos} de ${pr.total} pasos · ${pr.atrasados ? '⚠️ ' + pr.atrasados + ' atrasados' : '✅ vas al día'}</div>` : ''}
         <h2>Plan de estudio</h2>
@@ -866,6 +889,232 @@ function reducirImagen(f) {
 }
 function aBase64(f) { return new Promise((ok, mal) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = () => mal(new Error('no se pudo leer')); r.readAsDataURL(f); }); }
 
+// ---------- 🍽️ COMIDAS: propuestas de la IA, votos de la familia, menú de la semana y lista de la compra ----------
+const SECCIONES = ['Fruta y verdura', 'Carne', 'Pescado', 'Lácteos y huevos', 'Panadería', 'Despensa', 'Congelados', 'Otros'];
+let semanaComidas = lunesDe(hoyIso());
+const platosSemana = () => D.comidas.filter(c => c.semana === semanaComidas);
+const ingredientesDe = c => { try { return JSON.parse(c.ingredientes || '[]'); } catch (e) { return []; } };
+const pasosDe = c => { try { return JSON.parse(c.pasos || '[]'); } catch (e) { return []; } };
+const platoDelDia = (fecha, tipo) => D.comidas.find(c => c.tipo === tipo && lista(c.dias).includes(fecha));
+async function llamarHoja(datos) {
+    if (!cfg.url) throw new Error('La IA funciona con la hoja conectada (⚙️ Ajustes)');
+    const r = await fetch(cfg.url, { method: 'POST', body: JSON.stringify(Object.assign({ clave: cfg.clave }, datos)) });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error);
+    return j;
+}
+function cambiarSemana(n) { semanaComidas = sumarDias(semanaComidas, n); pintar(); }
+// En «Hoy»: lo que se come hoy
+function menuHoy() {
+    const hoy = hoyIso(), co = platoDelDia(hoy, 'comida'), ce = platoDelDia(hoy, 'cena');
+    if (!co && !ce) return '';
+    return `<div class="tarjeta" style="margin-top:12px" onclick="semanaComidas=lunesDe(hoyIso());ir('comidas')">🍽️ <b>Hoy</b>${co ? ' · ☀️ ' + esc(co.nombre) : ''}${ce ? ' · 🌙 ' + esc(ce.nombre) : ''}</div>`;
+}
+function vistaComidas() {
+    const lunes = semanaComidas, platos = platosSemana(), hoy = hoyIso(), dl = deIso(lunes);
+    let h = `<div class="mes-cab"><button onclick="cambiarSemana(-7)">‹</button><b style="font-size:16px;text-transform:none">${lunes === lunesDe(hoy) ? 'Esta semana' : 'Semana del ' + dl.getDate() + ' de ' + MESES[dl.getMonth()]}</b><button onclick="cambiarSemana(7)">›</button></div>`;
+    h += `<h2>📅 Menú de la semana</h2><div class="tarjeta" style="padding:4px 10px">`;
+    for (let i = 0; i < 7; i++) {
+        const f = sumarDias(lunes, i), co = platoDelDia(f, 'comida'), ce = platoDelDia(f, 'cena');
+        h += `<div class="menu-dia ${f === hoy ? 'hoy' : ''}"><div class="md-d">${DIAS[deIso(f).getDay()].slice(0, 3)} ${deIso(f).getDate()}</div>
+            <button class="md-p" onclick="elegirPlato('${f}','comida')">☀️ ${co ? esc(co.nombre) : '<span style="color:var(--gris)">comida…</span>'}</button>
+            <button class="md-p" onclick="elegirPlato('${f}','cena')">🌙 ${ce ? esc(ce.nombre) : '<span style="color:var(--gris)">cena…</span>'}</button></div>`;
+    }
+    h += `</div><h2>🗳️ Propuestas · vota las que te gusten</h2>
+        <div class="botones" style="margin-top:0"><button class="btn pri" style="background:linear-gradient(135deg,#7c3aed,#db2777)" onclick="proponerComidas()">✨ Proponer con IA</button><button class="btn" onclick="editarPlato(null)">➕ Añadir plato</button></div>`;
+    if (!platos.length) h += `<div class="vacio" style="margin-top:8px">Todavía no hay propuestas para esta semana</div>`;
+    ['comida', 'cena'].forEach(t => {
+        const ps = platos.filter(p => p.tipo === t).sort((a, b) => lista(b.votos).length - lista(a.votos).length);
+        if (ps.length) h += `<h2 style="margin-top:14px;text-transform:none;letter-spacing:0">${t === 'comida' ? '☀️ Comidas' : '🌙 Cenas'}</h2>` + ps.map(itemPlato).join('');
+    });
+    return h + vistaCompra();
+}
+function itemPlato(p) {
+    const yo = miembro(cfg.yo), votos = lista(p.votos), mio = yo && votos.includes(yo.id), dias = lista(p.dias);
+    return `<div class="item" style="border-left-color:${votos.length ? '#22c55e' : '#cbd5e1'};align-items:flex-start" onclick="verPlato('${p.id}')">
+        <div class="txt"><div class="tit">${esc(p.nombre)}</div><div class="sub">${esc(p.descripcion || '')}${p.tiempo ? ' · ⏱️ ' + esc(p.tiempo) : ''}</div>
+        ${dias.length ? `<div class="sub" style="color:var(--azul);font-weight:600">📅 ${dias.map(f => DIAS[deIso(f).getDay()]).join(', ')}</div>` : ''}
+        <div class="sub">${votos.map(id => miembro(id)).filter(Boolean).map(m => cara(m)).join(' ')}</div></div>
+        <button class="voto ${mio ? 'on' : ''}" onclick="event.stopPropagation();votarPlato('${p.id}')">👍<b>${votos.length}</b></button></div>`;
+}
+// Votos: se cambian aquí al momento y en la hoja se suman (no se pisan los de dos móviles a la vez)
+function votarPlato(id) {
+    const yo = miembro(cfg.yo);
+    if (!yo) { avisar('⚙️ Primero di en Ajustes quién usa este móvil'); return; }
+    const p = D.comidas.find(c => c.id === id);
+    if (!p) return;
+    const v = lista(p.votos), si = !v.includes(yo.id);
+    p.votos = (si ? v.concat(yo.id) : v.filter(x => x !== yo.id)).join(',');
+    pend.push({ op: 'votar', tabla: 'comidas', id, quien: yo.id, si });
+    guardarLS('af_datos', D); guardarLS('af_pendientes', pend);
+    sincronizar();
+    if (document.getElementById('modal-plato')) verPlato(id); else pintar();
+}
+function verPlato(id) {
+    const p = D.comidas.find(c => c.id === id);
+    if (!p) return;
+    const ing = ingredientesDe(p), pasos = pasosDe(p), votos = lista(p.votos), yo = miembro(cfg.yo);
+    abrirModal(`<div id="modal-plato"><h3>${p.tipo === 'cena' ? '🌙' : '☀️'} ${esc(p.nombre)}</h3>
+        <div style="color:var(--gris)">${esc(p.descripcion || '')}${p.tiempo ? ' · ⏱️ ' + esc(p.tiempo) : ''}</div>
+        <div class="botones"><button class="btn ${yo && votos.includes(yo.id) ? 'pri' : ''}" onclick="votarPlato('${p.id}')">👍 Me gusta (${votos.length})</button></div>
+        ${ing.length ? `<h2>Ingredientes (4 personas)</h2><ul style="margin:0;padding-left:20px;line-height:1.6">${ing.map(i => `<li>${esc(i.producto)}${i.cantidad ? ' · <span style="color:var(--gris)">' + esc(i.cantidad) + '</span>' : ''}</li>`).join('')}</ul>` : ''}
+        ${pasos.length ? `<h2>Cómo se hace</h2><ol style="margin:0;padding-left:20px;line-height:1.6">${pasos.map(s => `<li style="margin-bottom:4px">${esc(s)}</li>`).join('')}</ol>` : ''}
+        <div class="botones"><button class="btn" onclick="editarPlato('${p.id}')">✏️ Cambiar</button><button class="btn peligro" onclick="if(confirm('¿Quitar este plato?')){borrar('comidas','${p.id}');cerrarModal()}">🗑️ Quitar</button></div>
+        <div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button></div></div>`);
+}
+function editarPlato(id) {
+    const p = id ? D.comidas.find(c => c.id === id) : { id: '', tipo: 'comida', nombre: '', descripcion: '', tiempo: '', ingredientes: '[]' };
+    abrirModal(`<h3>${id ? '✏️ Cambiar plato' : '➕ Añadir plato'}</h3>
+        <label class="et">Plato</label><div class="con-micro"><input id="pl-nombre" value="${esc(p.nombre)}" placeholder="Lentejas, merluza al horno…"><button onclick="dictar('pl-nombre')">🎤</button></div>
+        <label class="et">Es para</label><select id="pl-tipo"><option value="comida">☀️ Comida</option><option value="cena" ${p.tipo === 'cena' ? 'selected' : ''}>🌙 Cena</option></select>
+        <label class="et">Descripción (opcional)</label><input id="pl-desc" value="${esc(p.descripcion)}">
+        <label class="et">Ingredientes (uno por línea, con la cantidad si quieres)</label><textarea id="pl-ing" placeholder="Lentejas 400 g&#10;Chorizo 1&#10;Zanahoria 2">${esc(ingredientesDe(p).map(i => i.producto + (i.cantidad ? ' ' + i.cantidad : '')).join('\n'))}</textarea>
+        <div class="botones"><button class="btn pri" onclick="guardarPlato('${p.id}')">💾 Guardar</button><button class="btn" onclick="cerrarModal()">Cancelar</button></div>`);
+}
+function guardarPlato(id) {
+    const nombre = val('pl-nombre');
+    if (!nombre) { avisar('✍️ Escribe el plato'); return; }
+    const viejo = id ? D.comidas.find(c => c.id === id) : null, antes = viejo ? ingredientesDe(viejo) : [];
+    const ing = val('pl-ing').split('\n').map(s => s.trim()).filter(Boolean).map(s => {
+        const igual = antes.find(i => (i.producto + (i.cantidad ? ' ' + i.cantidad : '')) === s);
+        return igual || { producto: s, cantidad: '', seccion: 'Otros' };
+    });
+    guardar('comidas', Object.assign({ semana: semanaComidas, votos: '', dias: '', pasos: '[]', tiempo: '' }, viejo || {},
+        { id: id || nuevoId(), nombre, tipo: document.getElementById('pl-tipo').value, descripcion: val('pl-desc'), ingredientes: JSON.stringify(ing) }));
+    cerrarModal();
+}
+function elegirPlato(fecha, tipo) {
+    const ps = platosSemana().filter(p => p.tipo === tipo).sort((a, b) => lista(b.votos).length - lista(a.votos).length), actual = platoDelDia(fecha, tipo);
+    abrirModal(`<h3>${tipo === 'comida' ? '☀️ Comida' : '🌙 Cena'} del ${nombreDia(fecha)}</h3>` +
+        (ps.length ? ps.map(p => `<div class="item" style="border-left-color:${actual && actual.id === p.id ? 'var(--azul)' : '#cbd5e1'}" onclick="ponerPlato('${fecha}','${tipo}','${p.id}')">
+            <div class="txt"><div class="tit">${esc(p.nombre)}</div><div class="sub">👍 ${lista(p.votos).length}${lista(p.dias).length ? ' · ya está el ' + lista(p.dias).map(f => DIAS[deIso(f).getDay()]).join(', ') : ''}</div></div></div>`).join('')
+            : `<div class="vacio">No hay propuestas de ${tipo} esta semana. Pide unas a la IA o añade un plato.</div>`) +
+        `<div class="botones">${actual ? `<button class="btn peligro" onclick="ponerPlato('${fecha}','${tipo}','')">Quitar</button>` : ''}<button class="btn" onclick="cerrarModal()">Cerrar</button></div>`);
+}
+function ponerPlato(fecha, tipo, id) {
+    D.comidas.filter(p => p.tipo === tipo && p.id !== id && lista(p.dias).includes(fecha))
+        .forEach(p => guardar('comidas', Object.assign({}, p, { dias: lista(p.dias).filter(f => f !== fecha).join(',') })));
+    const p = D.comidas.find(c => c.id === id);
+    if (p && !lista(p.dias).includes(fecha)) guardar('comidas', Object.assign({}, p, { dias: lista(p.dias).concat(fecha).sort().join(',') }));
+    cerrarModal();
+}
+function proponerComidas() {
+    const opciones = n => [3, 4, 5, 6, 7].map(v => `<option ${v === n ? 'selected' : ''}>${v}</option>`).join('');
+    abrirModal(`<h3>✨ Propuestas de comidas</h3>
+        <div class="dos"><div><label class="et">☀️ Comidas</label><select id="pc-comidas">${opciones(5)}</select></div><div><label class="et">🌙 Cenas</label><select id="pc-cenas">${opciones(5)}</select></div></div>
+        <label class="et">Gustos, alergias o ideas (se recuerdan en este móvil)</label><textarea id="pc-gustos" placeholder="A uno no le gusta el pescado con espinas, menos fritos, algo con pasta…">${esc(localStorage.getItem('af_gustos') || '')}</textarea>
+        <div class="botones"><button class="btn pri" id="pc-btn" style="background:linear-gradient(135deg,#7c3aed,#db2777)" onclick="pedirComidas()">✨ Proponer</button><button class="btn" onclick="cerrarModal()">Cancelar</button></div>
+        <small class="ayuda">Se añaden a las propuestas de la semana para que votéis. Tarda unos segundos.</small>`);
+}
+async function pedirComidas() {
+    const boton = document.getElementById('pc-btn'), gustos = val('pc-gustos');
+    try { localStorage.setItem('af_gustos', gustos); } catch (e) {}
+    boton.disabled = true; boton.textContent = '⏳ Pensando platos…';
+    try {
+        const j = await llamarHoja({ comidas: { comidas: val('pc-comidas'), cenas: val('pc-cenas'), gustos, mes: MESES[new Date().getMonth()], yaHay: platosSemana().map(p => p.nombre) } });
+        const platos = (j.platos || []).filter(p => p && p.nombre && ['comida', 'cena'].includes(p.tipo));
+        platos.forEach(p => guardar('comidas', { id: nuevoId(), semana: semanaComidas, tipo: p.tipo, nombre: p.nombre, descripcion: p.descripcion || '', tiempo: p.tiempo || '',
+            ingredientes: JSON.stringify(p.ingredientes || []), pasos: JSON.stringify(p.pasos || []), votos: '', dias: '' }));
+        cerrarModal(); avisar('✨ ' + platos.length + ' propuestas nuevas. ¡A votar!');
+    } catch (e) { avisar('⚠️ ' + e.message); boton.disabled = false; boton.textContent = '✨ Proponer'; }
+}
+// ---------- 🛒 Lista de la compra ----------
+function vistaCompra() {
+    const items = D.compra.filter(c => c.semana === semanaComidas), quedan = items.filter(c => c.hecho !== '1').length;
+    let h = `<h2>🛒 Lista de la compra${items.length ? ' · faltan ' + quedan : ''}</h2>
+        <div class="botones" style="margin-top:0"><button class="btn pri" id="co-btn" onclick="hacerCompra()">🛒 ${items.some(c => c.manual !== '1') ? 'Rehacer' : 'Hacer'} con el menú</button>${quedan ? `<button class="btn" onclick="compartirCompra()">📤 Enviar</button>` : ''}</div>`;
+    const secciones = SECCIONES.concat([...new Set(items.map(c => c.seccion))].filter(s => !SECCIONES.includes(s)));
+    secciones.forEach(s => {
+        const xs = items.filter(c => (c.seccion || 'Otros') === s).sort((a, b) => (a.hecho === '1') - (b.hecho === '1'));
+        if (!xs.length) return;
+        h += `<div class="plan-dia">${esc(s)}</div>` + xs.map(c => `<div class="paso ${c.hecho === '1' ? 'hecho' : ''}"><button class="check" onclick="marcarCompra('${c.id}')">${c.hecho === '1' ? '✓' : ''}</button>
+            <span style="flex:1" onclick="marcarCompra('${c.id}')">${esc(c.producto)}${c.cantidad ? ' <small style="color:var(--gris)">· ' + esc(c.cantidad) + '</small>' : ''}</span>
+            <button style="border:none;background:none;color:#9ca3af;font-size:18px" onclick="borrar('compra','${c.id}');pintar()">✕</button></div>`).join('');
+    });
+    return h + `<div class="con-micro" style="margin-top:10px"><input id="co-nuevo" placeholder="Añadir algo a la lista…" onkeydown="if(event.key==='Enter')anadirCompra()"><button onclick="anadirCompra()">＋</button></div>`;
+}
+function marcarCompra(id) {
+    const c = D.compra.find(x => x.id === id);
+    if (c) { guardar('compra', Object.assign({}, c, { hecho: c.hecho === '1' ? '' : '1' })); pintar(); }
+}
+function anadirCompra() {
+    const t = val('co-nuevo');
+    if (!t) return;
+    guardar('compra', { id: nuevoId(), semana: semanaComidas, seccion: 'Otros', producto: t, cantidad: '', hecho: '', manual: '1' });
+    pintar(); setTimeout(() => document.getElementById('co-nuevo')?.focus(), 50);
+}
+async function hacerCompra() {
+    const platos = platosSemana().filter(p => lista(p.dias).length);
+    if (!platos.length) { avisar('📅 Primero pon platos en el menú de la semana'); return; }
+    const viejos = D.compra.filter(c => c.semana === semanaComidas && c.manual !== '1');
+    if (viejos.length && !confirm('Se rehace la lista con el menú (lo añadido a mano se queda). ¿Seguir?')) return;
+    const boton = document.getElementById('co-btn');
+    boton.disabled = true; boton.textContent = '⏳ Haciendo la lista…';
+    try {
+        const j = await llamarHoja({ compra: { platos: platos.map(p => ({ nombre: p.nombre, veces: lista(p.dias).length, ingredientes: ingredientesDe(p) })) } });
+        viejos.forEach(c => borrar('compra', c.id));
+        (j.lista || []).filter(i => i && i.producto).forEach(i => guardar('compra', { id: nuevoId(), semana: semanaComidas, seccion: i.seccion || 'Otros', producto: i.producto, cantidad: i.cantidad || '', hecho: '', manual: '' }));
+        avisar('🛒 Lista hecha: ' + (j.lista || []).length + ' cosas');
+    } catch (e) { avisar('⚠️ ' + e.message); }
+    pintar();
+}
+function compartirCompra() {
+    const items = D.compra.filter(c => c.semana === semanaComidas && c.hecho !== '1');
+    let t = '🛒 Lista de la compra\n';
+    SECCIONES.concat(['']).forEach(s => {
+        const xs = items.filter(c => s ? c.seccion === s : !SECCIONES.includes(c.seccion));
+        if (xs.length) t += '\n*' + (s || 'Otros') + '*\n' + xs.map(c => '- ' + c.producto + (c.cantidad ? ' (' + c.cantidad + ')' : '')).join('\n') + '\n';
+    });
+    if (navigator.share) navigator.share({ text: t }).catch(() => {});
+    else window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank');
+}
+
+// ---------- 📷 Foto de cada uno (se guarda pequeña en la hoja, nunca en la web) ----------
+function cara(m, tam) {
+    if (m && m.foto && String(m.foto).startsWith('data:image/')) return `<img class="cara" src="${m.foto}" style="width:${tam || 20}px;height:${tam || 20}px" alt="">`;
+    return m ? esc(m.emoji || '🙂') : '';
+}
+let fotoMiembro, recorte = null;
+function elegirFotoMiembro(f) {
+    if (!f) return;
+    const img = new Image();
+    img.onload = () => {
+        const s0 = 200 / Math.min(img.width, img.height);
+        recorte = { img, s0, zoom: 1, x: (200 - img.width * s0) / 2, y: (200 - img.height * s0) / 2 };
+        document.getElementById('mi-recorte').style.display = '';
+        document.getElementById('rc-img').src = img.src;
+        document.getElementById('rc-zoom').value = 1;
+        pintarRecorte();
+    };
+    img.onerror = () => avisar('⚠️ No se puede leer esa foto');
+    img.src = URL.createObjectURL(f);
+}
+function zoomRecorte(z) {
+    const r = recorte, sv = r.s0 * r.zoom, cx = (100 - r.x) / sv, cy = (100 - r.y) / sv;
+    r.zoom = z; const sn = r.s0 * z; r.x = 100 - cx * sn; r.y = 100 - cy * sn;
+    pintarRecorte();
+}
+function pintarRecorte() {
+    const r = recorte, s = r.s0 * r.zoom, w = r.img.width * s, h = r.img.height * s;
+    r.x = Math.min(0, Math.max(200 - w, r.x)); r.y = Math.min(0, Math.max(200 - h, r.y));
+    const im = document.getElementById('rc-img');
+    if (!im) return;
+    im.style.width = w + 'px'; im.style.height = h + 'px'; im.style.left = r.x + 'px'; im.style.top = r.y + 'px';
+}
+function moverRecorte(ev) {
+    const marco = document.getElementById('rc-marco');
+    marco.setPointerCapture(ev.pointerId);
+    let px = ev.clientX, py = ev.clientY;
+    marco.onpointermove = e => { recorte.x += e.clientX - px; recorte.y += e.clientY - py; px = e.clientX; py = e.clientY; pintarRecorte(); };
+    marco.onpointerup = marco.onpointercancel = () => { marco.onpointermove = null; };
+}
+function fotoRecortada() {
+    const r = recorte, s = r.s0 * r.zoom, c = document.createElement('canvas');
+    c.width = c.height = 160;
+    c.getContext('2d').drawImage(r.img, -r.x / s, -r.y / s, 200 / s, 200 / s, 0, 0, 160, 160);
+    return c.toDataURL('image/jpeg', 0.8);
+}
+
 // ---------- Utilidades ----------
 function avisar(t) {
     const a = document.createElement('div'); a.className = 'aviso'; a.textContent = t;
@@ -904,6 +1153,15 @@ async function actualizarYa() {
 // ---------- Arranque ----------
 if (!miembro(cfg.yo)) cfg.yo = '';
 if (miembro(cfg.yo)?.rol === 'hijo') filtro = cfg.yo;
+// QR de instalación: el enlace lleva #hoja=<dirección del script> y la app queda apuntando a la hoja.
+// La clave de la familia NO va en el QR: se escribe a mano. (El #… se deja en la dirección: en iPhone,
+// la app de la pantalla de inicio guarda sus datos aparte de Safari y así también la recibe.)
+(function () {
+    const m = location.hash.match(/^#hoja=(https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec)$/);
+    if (!m || cfg.url === m[1]) return;
+    cfg.url = m[1]; guardarLS('af_config', cfg);
+    if (!cfg.clave) setTimeout(() => { ir('ajustes'); avisar('🔑 Escribe la clave de la familia y pulsa «Guardar y conectar»'); }, 400);
+})();
 pintar();
 sincronizar();
 setTimeout(mirarVersionNueva, 3000);
