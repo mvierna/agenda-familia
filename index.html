@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="es" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Agenda Familia</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#4f46e5">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icono-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Agenda">
+<link rel="apple-touch-icon" href="icono-512.png">
+<style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    :root { --azul: #4f46e5; --fondo: #f3f4fb; --texto: #1f2937; --gris: #6b7280; --nav: 64px; }
+    /* Sin alturas fijas en html/body (en iPhone dejaban una franja abajo): la barra va pegada al borde con position fixed */
+    html, body { margin: 0; background: var(--fondo); color: var(--texto); font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 16px; }
+    body { min-height: 100vh; padding-bottom: calc(var(--nav) + env(safe-area-inset-bottom) + 16px); }
+    header { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; padding: calc(env(safe-area-inset-top) + 14px) 18px 18px; border-radius: 0 0 22px 22px; }
+    header .fila { display: flex; align-items: center; gap: 10px; }
+    header h1 { margin: 0; font-size: 22px; flex: 1; }
+    header .fecha { opacity: .85; font-size: 14px; margin-top: 2px; }
+    #estado { font-size: 13px; background: rgba(255,255,255,.18); padding: 4px 10px; border-radius: 20px; }
+    main { padding: 14px; max-width: 640px; margin: 0 auto; }
+    h2 { font-size: 15px; color: var(--gris); text-transform: uppercase; letter-spacing: .5px; margin: 20px 4px 8px; }
+    h2:first-child { margin-top: 6px; }
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
+    .chip { flex: none; border: 2px solid transparent; background: #fff; border-radius: 20px; padding: 7px 13px; font-size: 15px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .chip.on { border-color: var(--c, var(--azul)); background: color-mix(in srgb, var(--c, var(--azul)) 14%, #fff); font-weight: 600; }
+    .item { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 14px; padding: 12px; margin-bottom: 8px; border-left: 6px solid #94a3b8; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .item .ico { font-size: 24px; }
+    .item .txt { flex: 1; min-width: 0; }
+    .item .tit { font-weight: 600; }
+    .item .sub { font-size: 13px; color: var(--gris); margin-top: 2px; }
+    .item.hecho .tit { text-decoration: line-through; color: var(--gris); }
+    .item.importante { background: #fff7ed; }
+    .check { width: 34px; height: 34px; flex: none; border-radius: 50%; border: 2px solid #cbd5e1; background: #fff; font-size: 18px; font-weight: 700; color: #fff; }
+    .hecho .check { background: #22c55e; border-color: #22c55e; }
+    .vacio { text-align: center; color: var(--gris); padding: 18px; background: #fff; border-radius: 14px; }
+    .tarjeta { background: #fff; border-radius: 16px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.06); margin-bottom: 10px; }
+    /* Calendario */
+    .mes-cab { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .mes-cab b { font-size: 18px; text-transform: capitalize; }
+    .mes-cab button { border: none; background: #fff; width: 40px; height: 40px; border-radius: 12px; font-size: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .rejilla { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .rejilla .ds { text-align: center; font-size: 12px; color: var(--gris); padding: 4px 0; }
+    .dia { background: #fff; border-radius: 10px; min-height: 52px; padding: 5px 3px; text-align: center; font-size: 15px; border: 2px solid transparent; }
+    .dia.fuera { opacity: .35; }
+    .dia.hoy { background: #eef2ff; font-weight: 700; color: var(--azul); }
+    .dia.sel { border-color: var(--azul); }
+    .puntos { display: flex; justify-content: center; flex-wrap: wrap; gap: 2px; margin-top: 4px; }
+    .puntos i { width: 7px; height: 7px; border-radius: 50%; display: block; }
+    /* Puntos de tareas */
+    .marcador { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+    .marcador div { background: #fff; border-radius: 14px; padding: 12px; text-align: center; border-top: 5px solid var(--c); }
+    .marcador b { display: block; font-size: 26px; }
+    /* Barra inferior */
+    nav { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; display: flex; justify-content: space-around; align-items: center; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); box-shadow: 0 -2px 10px rgba(0,0,0,.08); z-index: 10; }
+    nav button { border: none; background: none; font-size: 12px; color: var(--gris); display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 60px; padding: 4px; }
+    nav button span { font-size: 22px; }
+    nav button.on { color: var(--azul); font-weight: 700; }
+    nav .mas { background: var(--azul); color: #fff; width: 54px; height: 54px; border-radius: 18px; font-size: 30px; min-width: 0; margin-top: -22px; box-shadow: 0 4px 12px rgba(79,70,229,.4); justify-content: center; }
+    /* Ventanas */
+    .fondo-modal { position: fixed; inset: 0; background: rgba(15,23,42,.5); z-index: 50; display: flex; align-items: flex-end; justify-content: center; }
+    .modal { background: #fff; width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto; border-radius: 22px 22px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
+    .modal h3 { margin: 0 0 12px; font-size: 19px; }
+    label.et { display: block; font-size: 13px; color: var(--gris); margin: 12px 0 5px; font-weight: 600; }
+    input, select, textarea { width: 100%; font-size: 16px; padding: 11px; border: 1.5px solid #d1d5db; border-radius: 12px; font-family: inherit; background: #fff; }
+    textarea { min-height: 70px; }
+    .con-micro { display: flex; gap: 8px; }
+    .con-micro button { flex: none; width: 48px; border: none; border-radius: 12px; background: #eef2ff; font-size: 20px; }
+    .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .botones { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+    .btn { flex: 1; border: none; border-radius: 12px; padding: 13px; font-size: 16px; font-weight: 600; background: #e5e7eb; color: var(--texto); }
+    .btn.pri { background: var(--azul); color: #fff; }
+    .btn.peligro { background: #fee2e2; color: #b91c1c; }
+    .aviso { position: fixed; left: 50%; bottom: calc(var(--nav) + env(safe-area-inset-bottom) + 20px); transform: translateX(-50%); background: #111827; color: #fff; padding: 10px 16px; border-radius: 12px; z-index: 60; font-size: 15px; max-width: 90%; text-align: center; }
+    .miembro { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #eee; }
+    .miembro:last-child { border-bottom: none; }
+    .bola { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex: none; }
+    .pie { text-align: center; color: var(--gris); font-size: 12px; margin: 20px 0; }
+    small.ayuda { color: var(--gris); display: block; margin-top: 6px; line-height: 1.4; }
+    #btn-ajustes, #btn-buscar { background: rgba(255,255,255,.18); border: none; color: #fff; width: 38px; height: 38px; border-radius: 12px; font-size: 18px; }
+    /* Exámenes */
+    .barra { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+    .barra i { display: block; height: 100%; background: #22c55e; }
+    .plan-dia { margin: 14px 0 5px; font-size: 13px; font-weight: 700; color: var(--gris); }
+    .plan-dia.hoy { color: var(--azul); }
+    .paso { display: flex; align-items: center; gap: 10px; padding: 9px 10px; background: #f8fafc; border-radius: 10px; margin-bottom: 5px; }
+    .paso.hecho span { text-decoration: line-through; color: var(--gris); }
+    .paso .check { width: 30px; height: 30px; font-size: 15px; }
+    .fotos { display: flex; gap: 8px; flex-wrap: wrap; }
+    .fotos a, .fotos label { width: 72px; height: 72px; border-radius: 10px; background: #eef2ff; display: flex; align-items: center; justify-content: center; font-size: 28px; text-decoration: none; overflow: hidden; }
+    .fotos label { background: #fff; border: 2px dashed #c7d2fe; }
+    /* Cuenta atrás */
+    .cuenta { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: none; }
+    .cta { flex: none; width: 118px; background: #fff; border-radius: 16px; padding: 10px 8px; text-align: center; border-top: 5px solid var(--c); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .cta .em { font-size: 22px; }
+    .cta b { display: block; font-size: 32px; color: var(--c); line-height: 1.1; }
+    .cta .ud { font-size: 12px; color: var(--gris); }
+    .cta .t { font-size: 13px; font-weight: 600; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cta .q { font-size: 12px; color: var(--gris); }
+    details.tarjeta summary { cursor: pointer; font-size: 16px; }
+    details.tarjeta p { line-height: 1.5; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<header>
+    <div class="fila"><h1 id="titulo">Agenda Familia</h1><span id="estado" onclick="sincronizar(true)"></span><button id="btn-buscar" onclick="abrirBuscar()">🔎</button><button id="btn-ajustes" onclick="ir('ajustes')">⚙️</button></div>
+    <div class="fecha" id="cab-fecha"></div>
+</header>
+<main id="vista"></main>
+<nav>
+    <button data-v="hoy" onclick="ir('hoy')"><span>🏠</span>Hoy</button>
+    <button data-v="cal" onclick="ir('cal')"><span>📅</span>Calendario</button>
+    <button class="mas" onclick="nuevoSegunVista()">＋</button>
+    <button data-v="examenes" onclick="ir('examenes')"><span>📝</span>Exámenes</button>
+    <button data-v="tareas" onclick="ir('tareas')"><span>⭐</span>Tareas</button>
+</nav>
+<div id="capa-modal"></div>
+
+<script>
+// ==========================================
+// AGENDA FAMILIA · v1 (25/11/2026)
+// Hecha a partir de las ideas de MOVILEC 360 (calendario, marcar hecho, dictar, aviso de versión),
+// pero separada del todo: su propia web y su propia hoja de Google (cuenta personal).
+// Los datos se guardan en el móvil y, si hay conexión configurada, se comparten con la hoja (Codigo.gs).
+// ==========================================
+const VERSION_APP = 1;
+const TIPOS = {
+    deberes: ['📚', 'Deberes'], examen: ['📝', 'Examen'], actividad: ['⚽', 'Actividad'],
+    medico: ['🩺', 'Médico'], cumple: ['🎂', 'Cumpleaños'], viaje: ['✈️', 'Viaje'], otro: ['📌', 'Otro']
+};
+const IMPORTANTES = ['examen', 'cumple', 'medico', 'viaje'];
+const COLORES = ['#3b82f6', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#84cc16'];
+const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+// ---------- Guardado en el móvil ----------
+function leerLS(k, def) { try { return JSON.parse(localStorage.getItem(k)) ?? def; } catch (e) { return def; } }
+function guardarLS(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+let cfg = leerLS('af_config', { url: '', clave: '', yo: '' });
+let D = leerLS('af_datos', null);
+let pend = leerLS('af_pendientes', []);
+if (!D) {
+    // Primera vez: una familia de ejemplo, que se cambia en Ajustes
+    const t = Date.now();
+    D = { miembros: [
+        { id: 'ej1', nombre: 'Papá', emoji: '👨', color: '#3b82f6', rol: 'padre', mod: t },
+        { id: 'ej2', nombre: 'Hijo 1', emoji: '🧒', color: '#f59e0b', rol: 'hijo', mod: t },
+        { id: 'ej3', nombre: 'Hijo 2', emoji: '👧', color: '#10b981', rol: 'hijo', mod: t }
+    ], eventos: [], tareas: [], examenes: [] };
+    guardarLS('af_datos', D);
+}
+D.examenes = D.examenes || [];
+const TABLAS_APP = ['miembros', 'eventos', 'tareas', 'examenes'];
+
+// ---------- Fechas ----------
+const dos = n => String(n).padStart(2, '0');
+const iso = d => d.getFullYear() + '-' + dos(d.getMonth() + 1) + '-' + dos(d.getDate());
+const deIso = s => { const [a, m, d] = s.split('-').map(Number); return new Date(a, m - 1, d); };
+const hoyIso = () => iso(new Date());
+const sumarDias = (s, n) => { const d = deIso(s); d.setDate(d.getDate() + n); return iso(d); };
+const nombreDia = s => { const d = deIso(s); return DIAS[d.getDay()] + ' ' + d.getDate() + ' de ' + MESES[d.getMonth()]; };
+const lunesDe = s => { const d = deIso(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return iso(d); };
+const nuevoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// ---------- Datos ----------
+const miembro = id => D.miembros.find(m => m.id === id);
+const miembrosDe = quien => String(quien || '').split(',').filter(Boolean).map(miembro).filter(Boolean);
+const lista = s => String(s || '').split(',').filter(Boolean);
+const estaHecho = (x, fecha) => x.repetir && x.repetir !== 'una' && x.repetir !== '' ? lista(x.hecho).includes(fecha) : lista(x.hecho).length > 0;
+
+// Eventos de un día (con los que se repiten cada semana o cada año)
+function eventosDe(fecha) {
+    const d = deIso(fecha);
+    const examenes = D.examenes.filter(x => x.fecha === fecha).map(x => ({ id: x.id, fecha, hora: x.hora || '', titulo: 'Examen de ' + x.asignatura, tipo: 'examen', quien: x.quien, repetir: '', esExamen: true }));
+    return D.eventos.concat(examenes).filter(e => {
+        if (e.fecha === fecha) return true;
+        if (fecha < e.fecha) return false;
+        if (e.repetir === 'semanal') return deIso(e.fecha).getDay() === d.getDay();
+        if (e.repetir === 'anual') return e.fecha.slice(5) === fecha.slice(5);
+        return false;
+    }).filter(pasaFiltro).sort((a, b) => (a.hora || '00:00').localeCompare(b.hora || '00:00'));
+}
+// Tareas de casa de un día. Las de «una vez» sin hacer se arrastran a hoy.
+function tareasDe(fecha) {
+    const hoy = hoyIso(), d = deIso(fecha);
+    return D.tareas.filter(t => {
+        if (fecha < t.fecha && t.repetir !== 'una') return false;
+        if (t.repetir === 'diaria') return true;
+        if (t.repetir === 'semanal') return deIso(t.fecha).getDay() === d.getDay();
+        const hechaEl = lista(t.hecho)[0];
+        if (hechaEl) return hechaEl === fecha;
+        return t.fecha === fecha || (fecha === hoy && t.fecha < hoy);
+    }).filter(pasaFiltro);
+}
+function puntosSemana(idMiembro) {
+    const ini = lunesDe(hoyIso()), fin = sumarDias(ini, 6);
+    return D.tareas.filter(t => t.quien === idMiembro)
+        .reduce((s, t) => s + lista(t.hecho).filter(f => f >= ini && f <= fin).length * (Number(t.puntos) || 0), 0);
+}
+let filtro = '';
+const pasaFiltro = x => !filtro || !x.quien || lista(x.quien).includes(filtro);
+
+// Cada cambio: se guarda en el móvil y se apunta para subirlo a la hoja
+function guardar(tabla, fila) {
+    fila.mod = Date.now();
+    const i = D[tabla].findIndex(x => x.id === fila.id);
+    if (i >= 0) D[tabla][i] = fila; else D[tabla].push(fila);
+    pend.push({ op: 'guardar', tabla, fila });
+    guardarLS('af_datos', D); guardarLS('af_pendientes', pend);
+    sincronizar();
+}
+function borrar(tabla, id) {
+    D[tabla] = D[tabla].filter(x => x.id !== id);
+    pend.push({ op: 'borrar', tabla, id });
+    guardarLS('af_datos', D); guardarLS('af_pendientes', pend);
+    sincronizar();
+}
+function marcar(tabla, id, fecha) {
+    const x = D[tabla].find(y => y.id === id);
+    if (!x) return;
+    const h = lista(x.hecho), unaVez = !x.repetir || x.repetir === 'una';
+    const ya = unaVez ? h.length > 0 : h.includes(fecha);
+    const nuevo = unaVez ? (ya ? [] : [fecha]) : (ya ? h.filter(f => f !== fecha) : h.concat(fecha));
+    // Para no acumular para siempre: solo se guardan las fechas de los últimos 60 días
+    const limite = sumarDias(hoyIso(), -60);
+    guardar(tabla, Object.assign({}, x, { hecho: nuevo.filter(f => f >= limite).join(',') }));
+    if (!ya && tabla === 'tareas' && Number(x.puntos)) avisar(`⭐ +${x.puntos} ${Number(x.puntos) === 1 ? 'punto' : 'puntos'} para ${miembro(x.quien)?.nombre || ''}`);
+    pintar();
+}
+
+// ---------- Conexión con la hoja de Google ----------
+let sincronizando = false, otraVez = false;
+async function sincronizar(manual) {
+    if (!cfg.url) { estado(manual ? '📱 Solo en este móvil' : ''); if (manual) ir('ajustes'); return; }
+    if (sincronizando) { otraVez = true; return; }
+    sincronizando = true; estado('⏳');
+    const enviando = pend.slice();
+    try {
+        const r = await fetch(cfg.url, { method: 'POST', body: JSON.stringify({ clave: cfg.clave, ops: enviando }) });
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error || 'error');
+        pend = pend.slice(enviando.length); guardarLS('af_pendientes', pend);
+        // Lo que aún no se ha subido se vuelve a aplicar encima de lo que llega
+        TABLAS_APP.forEach(t => { D[t] = j[t] || []; });
+        pend.forEach(o => {
+            const i = D[o.tabla].findIndex(x => x.id === (o.fila ? o.fila.id : o.id));
+            if (o.op === 'borrar') { if (i >= 0) D[o.tabla].splice(i, 1); }
+            else if (i >= 0) D[o.tabla][i] = o.fila; else D[o.tabla].push(o.fila);
+        });
+        guardarLS('af_datos', D);
+        estado('✓ Al día'); setTimeout(() => estado(''), 2500);
+        if (!document.querySelector('.fondo-modal')) pintar();
+    } catch (e) {
+        estado(navigator.onLine ? '⚠️ Sin conectar' : '📴 Sin conexión');
+        if (manual) avisar(String(e.message).includes('CLAVE') ? '🔑 La clave no es la de la hoja' : '⚠️ No se pudo conectar: ' + e.message);
+    } finally {
+        sincronizando = false;
+        if (otraVez) { otraVez = false; sincronizar(); }
+    }
+}
+function estado(t) { const e = document.getElementById('estado'); e.textContent = t; e.style.display = t ? '' : 'none'; }
+
+// ---------- Pantallas ----------
+let vista = 'hoy', mesVista = new Date(), diaSel = hoyIso();
+function ir(v) { vista = v; window.scrollTo(0, 0); pintar(); }
+function pintar() {
+    document.querySelectorAll('nav [data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === vista));
+    const yo = miembro(cfg.yo);
+    document.getElementById('titulo').textContent = yo ? `Hola, ${yo.nombre} ${yo.emoji}` : 'Agenda Familia';
+    const fh = nombreDia(hoyIso()); document.getElementById('cab-fecha').textContent = fh.charAt(0).toUpperCase() + fh.slice(1);
+    const v = document.getElementById('vista');
+    v.innerHTML = vista === 'hoy' ? vistaHoy() : vista === 'cal' ? vistaCalendario() : vista === 'tareas' ? vistaTareas() : vista === 'examenes' ? vistaExamenes() : vistaAjustes();
+}
+function chipsFiltro() {
+    return `<div class="chips"><button class="chip ${filtro ? '' : 'on'}" onclick="filtro='';pintar()">👪 Todos</button>` +
+        D.miembros.map(m => `<button class="chip ${filtro === m.id ? 'on' : ''}" style="--c:${m.color}" onclick="filtro='${m.id}';pintar()">${m.emoji} ${esc(m.nombre)}</button>`).join('') + '</div>';
+}
+function itemEvento(e, fecha) {
+    const ms = miembrosDe(e.quien), [em] = TIPOS[e.tipo] || TIPOS.otro, hecho = estaHecho(e, fecha);
+    const color = ms.length === 1 ? ms[0].color : '#94a3b8';
+    const quien = ms.length ? ms.map(m => m.emoji + ' ' + esc(m.nombre)).join(', ') : '👪 Todos';
+    const anos = e.tipo === 'cumple' && e.repetir === 'anual' ? Number(fecha.slice(0, 4)) - Number(e.fecha.slice(0, 4)) : 0;
+    const pr = e.esExamen ? progreso(D.examenes.find(x => x.id === e.id)) : null;
+    return `<div class="item ${hecho ? 'hecho' : ''} ${IMPORTANTES.includes(e.tipo) ? 'importante' : ''}" style="border-left-color:${color}" onclick="${e.esExamen ? 'abrirExamen' : 'editarEvento'}('${e.id}')">
+        <div class="ico">${em}</div>
+        <div class="txt"><div class="tit">${esc(e.titulo)}${anos > 0 ? ' · ' + anos + ' años' : ''}</div><div class="sub">${e.hora ? '🕒 ' + e.hora + ' · ' : ''}${quien}${e.repetir === 'semanal' ? ' · 🔁 cada semana' : ''}${pr && pr.total ? ' · 📖 ' + pr.hechos + '/' + pr.total : ''}</div></div>
+        ${e.esExamen ? '' : `<button class="check" onclick="event.stopPropagation();marcar('eventos','${e.id}','${fecha}')">${hecho ? '✓' : ''}</button>`}</div>`;
+}
+function itemTarea(t, fecha) {
+    const m = miembro(t.quien), hecho = estaHecho(t, fecha), atrasada = (!t.repetir || t.repetir === 'una') && t.fecha < fecha && !hecho;
+    return `<div class="item ${hecho ? 'hecho' : ''}" style="border-left-color:${m ? m.color : '#94a3b8'}" onclick="editarTarea('${t.id}')">
+        <div class="ico">${m ? m.emoji : '👪'}</div>
+        <div class="txt"><div class="tit">${esc(t.titulo)}</div><div class="sub">${m ? esc(m.nombre) : 'Cualquiera'} · ⭐ ${t.puntos || 0}${atrasada ? ' · ⏰ pendiente' : ''}</div></div>
+        <button class="check" onclick="event.stopPropagation();marcar('tareas','${t.id}','${fecha}')">${hecho ? '✓' : ''}</button></div>`;
+}
+function bloqueDia(fecha, titulo) {
+    const ev = eventosDe(fecha), es = estudioDe(fecha);
+    return `<h2>${titulo}</h2>` + (ev.length || es.length ? ev.map(e => itemEvento(e, fecha)).join('') + es.map(s => itemPaso(s, fecha)).join('') : `<div class="vacio">Nada apuntado</div>`);
+}
+// ⏳ Cuenta atrás: los eventos marcados con «cuenta atrás» y todos los exámenes que vienen
+function proximaVez(e, hoy) {
+    if (e.repetir === 'anual') { let f = hoy.slice(0, 4) + e.fecha.slice(4); if (f < hoy) f = (Number(hoy.slice(0, 4)) + 1) + e.fecha.slice(4); return f; }
+    if (e.repetir === 'semanal') return null;
+    return e.fecha >= hoy ? e.fecha : null;
+}
+function cuentaAtras() {
+    const hoy = hoyIso();
+    const items = D.eventos.filter(e => e.cuenta === '1').filter(pasaFiltro)
+        .map(e => ({ f: proximaVez(e, hoy), t: e.titulo, em: (TIPOS[e.tipo] || TIPOS.otro)[0], q: e.quien, ir: `editarEvento('${e.id}')` }))
+        .concat(D.examenes.filter(pasaFiltro).filter(x => x.fecha >= hoy).map(x => ({ f: x.fecha, t: x.asignatura, em: '📝', q: x.quien, ir: `abrirExamen('${x.id}')` })))
+        .filter(i => i.f).sort((a, b) => a.f.localeCompare(b.f)).slice(0, 10);
+    if (!items.length) return '';
+    return `<h2>⏳ Cuenta atrás</h2><div class="cuenta">` + items.map(i => {
+        const n = Math.round((deIso(i.f) - deIso(hoy)) / 86400000), ms = miembrosDe(i.q), c = ms.length === 1 ? ms[0].color : '#4f46e5';
+        return `<div class="cta" style="--c:${c}" onclick="${i.ir}"><div class="em">${i.em}</div><b>${n === 0 ? '¡HOY!' : n}</b><div class="ud">${n === 0 ? '&nbsp;' : n === 1 ? 'día' : 'días'}</div>
+            <div class="t">${esc(i.t)}</div>${ms.length === 1 ? `<div class="q">${ms[0].emoji} ${esc(ms[0].nombre)}</div>` : ''}</div>`;
+    }).join('') + `</div>`;
+}
+function vistaHoy() {
+    const hoy = hoyIso();
+    let h = chipsFiltro() + cuentaAtras() + bloqueDia(hoy, 'Hoy') + bloqueDia(sumarDias(hoy, 1), 'Mañana · ' + nombreDia(sumarDias(hoy, 1)));
+    const ta = tareasDe(hoy), hechas = ta.filter(t => estaHecho(t, hoy)).length;
+    if (ta.length) h += `<h2>Tareas de casa · ${hechas} de ${ta.length}</h2>` + ta.map(t => itemTarea(t, hoy)).join('');
+    // Lo importante de los próximos 30 días (exámenes, cumpleaños, médico)
+    let prox = '';
+    for (let i = 2; i <= 30; i++) {
+        const f = sumarDias(hoy, i), ev = eventosDe(f).filter(e => IMPORTANTES.includes(e.tipo) || i <= 7);
+        if (ev.length) prox += `<h2 style="margin-top:12px;text-transform:none;letter-spacing:0">${nombreDia(f)}</h2>` + ev.map(e => itemEvento(e, f)).join('');
+    }
+    h += `<h2>Próximos días</h2>` + (prox || `<div class="vacio">Nada en la semana, ni exámenes ni cumpleaños en el mes</div>`);
+    return h;
+}
+function vistaCalendario() {
+    const a = mesVista.getFullYear(), m = mesVista.getMonth(), hoy = hoyIso();
+    const ini = new Date(a, m, 1); ini.setDate(1 - ((ini.getDay() + 6) % 7));
+    let celdas = '';
+    for (let i = 0; i < 42; i++) {
+        const d = new Date(ini); d.setDate(ini.getDate() + i);
+        if (i === 35 && d.getMonth() !== m) break;
+        const f = iso(d), ev = eventosDe(f);
+        const puntos = ev.slice(0, 5).map(e => { const ms = miembrosDe(e.quien); return `<i style="background:${ms.length === 1 ? ms[0].color : '#94a3b8'}"></i>`; }).join('');
+        celdas += `<div class="dia ${d.getMonth() !== m ? 'fuera' : ''} ${f === hoy ? 'hoy' : ''} ${f === diaSel ? 'sel' : ''}" onclick="diaSel='${f}';pintar()">${d.getDate()}<div class="puntos">${puntos}</div></div>`;
+    }
+    return chipsFiltro() + `<div class="mes-cab"><button onclick="cambiarMes(-1)">‹</button><b>${MESES[m]} ${a}</b><button onclick="cambiarMes(1)">›</button></div>
+        <div class="rejilla">${['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(x => `<div class="ds">${x}</div>`).join('')}${celdas}</div>` +
+        bloqueDia(diaSel, nombreDia(diaSel)) + `<button class="btn pri" style="width:100%;margin-top:6px" onclick="editarEvento(null,'${diaSel}')">＋ Añadir el ${deIso(diaSel).getDate()}</button>`;
+}
+function cambiarMes(n) { mesVista = new Date(mesVista.getFullYear(), mesVista.getMonth() + n, 1); pintar(); }
+function vistaTareas() {
+    const hoy = hoyIso(), hijos = D.miembros.filter(m => m.rol === 'hijo');
+    let h = `<h2>⭐ Puntos de esta semana</h2><div class="marcador">` +
+        (hijos.length ? hijos : D.miembros).map(m => `<div style="--c:${m.color}">${m.emoji} ${esc(m.nombre)}<b>${puntosSemana(m.id)}</b></div>`).join('') + `</div>`;
+    h += `<h2>Hoy</h2>` + chipsFiltro();
+    const ta = tareasDe(hoy);
+    h += ta.length ? ta.map(t => itemTarea(t, hoy)).join('') : `<div class="vacio">No hay tareas para hoy.<br>Pulsa ＋ para crear una.</div>`;
+    const todas = D.tareas.filter(pasaFiltro);
+    if (todas.length) h += `<h2>Todas las tareas</h2>` + todas.map(t => {
+        const m = miembro(t.quien), rep = { diaria: 'cada día', semanal: 'cada ' + DIAS[deIso(t.fecha).getDay()] }[t.repetir] || 'una vez, ' + nombreDia(t.fecha);
+        return `<div class="item" style="border-left-color:${m ? m.color : '#94a3b8'}" onclick="editarTarea('${t.id}')"><div class="ico">${m ? m.emoji : '👪'}</div><div class="txt"><div class="tit">${esc(t.titulo)}</div><div class="sub">⭐ ${t.puntos || 0} · ${rep}</div></div></div>`;
+    }).join('');
+    return h;
+}
+function vistaAjustes() {
+    return `<h2>¿Quién usa este móvil?</h2><div class="tarjeta"><div class="chips" style="flex-wrap:wrap">` +
+        D.miembros.map(m => `<button class="chip ${cfg.yo === m.id ? 'on' : ''}" style="--c:${m.color}" onclick="cfg.yo='${m.id}';guardarLS('af_config',cfg);pintar()">${m.emoji} ${esc(m.nombre)}</button>`).join('') +
+        `</div><small class="ayuda">Si es un hijo/a, lo que apunte desde aquí sale a su nombre.</small></div>
+        <h2>Familia</h2><div class="tarjeta">` +
+        D.miembros.map(m => `<div class="miembro" onclick="editarMiembro('${m.id}')"><div class="bola" style="background:${m.color}33">${m.emoji}</div><div style="flex:1"><b>${esc(m.nombre)}</b><div class="sub" style="font-size:13px;color:var(--gris)">${m.rol === 'hijo' ? 'Hijo/a · suma puntos' : 'Adulto'}</div></div>✏️</div>`).join('') +
+        `<button class="btn" style="width:100%;margin-top:10px" onclick="editarMiembro(null)">＋ Añadir a alguien</button></div>
+        <h2>Compartir con la familia</h2><div class="tarjeta">
+        <label class="et">Dirección de la hoja (la del script)</label><input id="cfg-url" value="${esc(cfg.url)}" placeholder="https://script.google.com/macros/s/…/exec">
+        <label class="et">Clave de la familia</label><input id="cfg-clave" value="${esc(cfg.clave)}" placeholder="La que da ponerClave en el script" autocapitalize="off">
+        <div class="botones"><button class="btn pri" onclick="guardarConexion()">💾 Guardar y conectar</button></div>
+        <small class="ayuda">${cfg.url ? '✅ Conectada: lo que apuntéis en cualquier móvil se ve en todos.' : '📱 Ahora todo se guarda solo en este móvil. Con la hoja conectada, toda la familia ve lo mismo.'}${pend.length ? `<br>⏳ ${pend.length} ${pend.length === 1 ? 'cambio' : 'cambios'} por subir.` : ''}</small></div>
+        <h2>Instalar en el móvil</h2><div class="tarjeta"><small class="ayuda" style="margin:0">📱 <b>iPhone</b>: en Safari, botón Compartir ⬆️ → «Añadir a pantalla de inicio».<br>🤖 <b>Android</b>: en Chrome, menú ⋮ → «Instalar aplicación».</small></div>
+        <div class="pie">Agenda Familia · v${VERSION_APP}</div>`;
+}
+function guardarConexion() {
+    cfg.url = document.getElementById('cfg-url').value.trim();
+    cfg.clave = document.getElementById('cfg-clave').value.trim();
+    guardarLS('af_config', cfg);
+    // Al conectar por primera vez se sube todo lo que hay en este móvil
+    if (cfg.url && !leerLS('af_subido', false)) {
+        TABLAS_APP.forEach(t => D[t].forEach(f => { if (!/^ej\d/.test(f.id) && !pend.some(o => o.fila && o.fila.id === f.id)) pend.push({ op: 'guardar', tabla: t, fila: f }); }));
+        guardarLS('af_pendientes', pend); guardarLS('af_subido', true);
+    }
+    pintar(); sincronizar(true);
+}
+
+// ---------- Ventanas para apuntar ----------
+function abrirModal(html) {
+    document.getElementById('capa-modal').innerHTML = `<div class="fondo-modal" onclick="if(event.target===this)cerrarModal()"><div class="modal">${html}</div></div>`;
+}
+function cerrarModal() { document.getElementById('capa-modal').innerHTML = ''; pintar(); }
+function nuevoSegunVista() { if (vista === 'examenes') nuevoExamen(); else if (vista === 'tareas') editarTarea(null); else editarEvento(null, vista === 'cal' ? diaSel : hoyIso()); }
+function chipsQuien(sel, multiple) {
+    return `<div class="chips" style="flex-wrap:wrap" id="quien">` + (multiple ? `<button type="button" class="chip ${sel.length ? '' : 'on'}" data-id="" onclick="elegirQuien(this,true)">👪 Todos</button>` : '') +
+        D.miembros.map(m => `<button type="button" class="chip ${sel.includes(m.id) ? 'on' : ''}" style="--c:${m.color}" data-id="${m.id}" onclick="elegirQuien(this,${multiple})">${m.emoji} ${esc(m.nombre)}</button>`).join('') + `</div>`;
+}
+function elegirQuien(b, multiple) {
+    const todos = [...document.querySelectorAll('#quien .chip')];
+    if (!multiple || !b.dataset.id) todos.forEach(x => x.classList.remove('on'));
+    b.classList.toggle('on', multiple && b.dataset.id ? !b.classList.contains('on') : true);
+    if (multiple) { const alguno = todos.some(x => x.dataset.id && x.classList.contains('on')); todos.find(x => !x.dataset.id).classList.toggle('on', !alguno); }
+}
+const quienElegido = () => [...document.querySelectorAll('#quien .chip.on')].map(x => x.dataset.id).filter(Boolean).join(',');
+
+function editarEvento(id, fecha) {
+    const e = id ? D.eventos.find(x => x.id === id) : { id: '', fecha: fecha || hoyIso(), hora: '', titulo: '', tipo: 'deberes', quien: cfg.yo && miembro(cfg.yo)?.rol === 'hijo' ? cfg.yo : (filtro || ''), repetir: '', notas: '' };
+    if (!e) return;
+    abrirModal(`<h3>${id ? '✏️ Cambiar' : '＋ Apuntar'}</h3>
+        <label class="et">¿Qué es?</label><div class="con-micro"><input id="ev-titulo" value="${esc(e.titulo)}" placeholder="Examen de mates, fútbol, dentista…"><button onclick="dictar('ev-titulo')">🎤</button></div>
+        <label class="et">Tipo</label><div class="chips" style="flex-wrap:wrap" id="tipos">${Object.entries(TIPOS).map(([k, [em, n]]) => `<button type="button" class="chip ${e.tipo === k ? 'on' : ''}" data-t="${k}" onclick="elegirTipo(this)">${em} ${n}</button>`).join('')}</div>
+        <div class="dos"><div><label class="et">Día</label><input type="date" id="ev-fecha" value="${e.fecha}"></div><div><label class="et">Hora (si hay)</label><input type="time" id="ev-hora" value="${e.hora || ''}"></div></div>
+        <label class="et">¿Para quién?</label>${chipsQuien(lista(e.quien), true)}
+        <label class="et">¿Se repite?</label><select id="ev-repetir"><option value="">No</option><option value="semanal" ${e.repetir === 'semanal' ? 'selected' : ''}>Cada semana (mismo día)</option><option value="anual" ${e.repetir === 'anual' ? 'selected' : ''}>Cada año (cumpleaños)</option></select>
+        <label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:15px"><input type="checkbox" id="ev-cuenta" style="width:auto" ${e.cuenta === '1' ? 'checked' : ''}> ⏳ Cuenta atrás en la pantalla de inicio</label>
+        <label class="et">Notas</label><textarea id="ev-notas" placeholder="Temas, qué llevar, dirección…">${esc(e.notas)}</textarea>
+        <div class="botones"><button class="btn pri" onclick="guardarEvento('${e.id}')">💾 Guardar</button><button class="btn" onclick="cerrarModal()">Cancelar</button></div>
+        ${id ? `<div class="botones"><button class="btn" onclick="avisoEvento('${e.id}')">⏰ Avisarme</button><button class="btn peligro" onclick="borrarEvento('${e.id}')">🗑️ Borrar</button></div>` : ''}`);
+    if (!id) setTimeout(() => document.getElementById('ev-titulo')?.focus(), 200);
+}
+function elegirTipo(b) {
+    document.querySelectorAll('#tipos .chip').forEach(x => x.classList.remove('on')); b.classList.add('on');
+    if (b.dataset.t === 'cumple') document.getElementById('ev-repetir').value = 'anual';
+    if (['viaje', 'examen'].includes(b.dataset.t)) document.getElementById('ev-cuenta').checked = true;
+}
+function guardarEvento(id) {
+    const titulo = document.getElementById('ev-titulo').value.trim();
+    if (!titulo) { avisar('✍️ Escribe qué es'); return; }
+    const viejo = id ? D.eventos.find(x => x.id === id) : null;
+    guardar('eventos', {
+        id: id || nuevoId(), titulo, tipo: document.querySelector('#tipos .chip.on')?.dataset.t || 'otro',
+        fecha: document.getElementById('ev-fecha').value || hoyIso(), hora: document.getElementById('ev-hora').value,
+        quien: quienElegido(), repetir: document.getElementById('ev-repetir').value,
+        notas: document.getElementById('ev-notas').value.trim(), hecho: viejo ? viejo.hecho : '',
+        cuenta: document.getElementById('ev-cuenta').checked ? '1' : ''
+    });
+    avisar('✅ Guardado'); cerrarModal();
+}
+function borrarEvento(id) {
+    const e = D.eventos.find(x => x.id === id);
+    if (!confirm(`¿Borrar «${e.titulo}»?${e.repetir ? '\n\nSe borra en todas las fechas en que se repite.' : ''}`)) return;
+    borrar('eventos', id); cerrarModal(); avisar('🗑️ Borrado');
+}
+// ---------- ⏰ AVISOS (copiados de 360): la app no puede sonar si está cerrada, así que el aviso se pasa al móvil ----------
+// Reloj (Android): abre la app Reloj con la alarma puesta. Calendario: Google Calendar en Android,
+// archivo .ics con el aviso ya puesto en iPhone y PC.
+const esAndroid = () => /Android/i.test(navigator.userAgent);
+const esIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let avisoActual = null;
+function avisoEvento(id) {
+    const e = D.eventos.find(x => x.id === id);
+    if (!e) return;
+    const hoy = hoyIso();
+    let fecha = e.fecha;
+    // Si se repite y la primera vez ya pasó, se propone la próxima
+    if (e.repetir === 'anual') fecha = proximaVez(e, hoy);
+    else if (e.repetir === 'semanal') while (fecha < hoy) fecha = sumarDias(fecha, 7);
+    abrirAviso({ titulo: (TIPOS[e.tipo] || TIPOS.otro)[0] + ' ' + e.titulo, fecha, hora: e.hora, notas: e.notas });
+}
+function avisoExamen(id) {
+    const x = camposExamen(D.examenes.find(y => y.id === id));
+    abrirAviso({ titulo: '📝 Examen de ' + x.asignatura, fecha: x.fecha, hora: x.hora, notas: x.temas, antes: 1440 });
+}
+function avisoEstudio(id) {
+    const x = camposExamen(D.examenes.find(y => y.id === id)), hoy = hoyIso(), ultimo = sumarDias(x.fecha, -1);
+    if (ultimo < hoy) { avisar('📅 El examen ya es hoy o ya pasó'); return; }
+    abrirAviso({ titulo: '📖 Estudiar ' + x.asignatura, fecha: hoy, hora: '18:00', notas: 'Mira lo de hoy en la Agenda Familia', hasta: ultimo });
+}
+function abrirAviso(a) {
+    avisoActual = a;
+    const capa = document.createElement('div');
+    capa.id = 'capa-aviso'; capa.className = 'fondo-modal'; capa.style.zIndex = 70;
+    capa.onclick = ev => { if (ev.target === capa) capa.remove(); };
+    capa.innerHTML = `<div class="modal"><h3>⏰ Avisarme</h3><div style="font-weight:600">${esc(a.titulo)}</div>
+        <div class="dos"><div><label class="et">Día</label><input type="date" id="al-fecha" value="${a.fecha}"></div><div><label class="et">Hora</label><input type="time" id="al-hora" value="${a.hora || '09:00'}"></div></div>
+        <label class="et">Que suene</label><select id="al-antes">${[[0, 'A esa hora justa'], [10, '10 minutos antes'], [30, '30 minutos antes'], [60, '1 hora antes'], [1440, '1 día antes']]
+            .map(([v, t]) => `<option value="${v}" ${(a.antes || 0) === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
+        ${a.hasta ? `<label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:15px"><input type="checkbox" id="al-diario" checked style="width:auto"> Cada día hasta el ${nombreDia(a.hasta)}</label>` : ''}
+        <div class="botones">${esIOS() ? '' : `<button class="btn" onclick="alarmaReloj()">⏰ Alarma en el Reloj</button>`}<button class="btn pri" onclick="alarmaCalendario()">📅 Al calendario del móvil</button></div>
+        <small class="ayuda" id="al-estado">${a.hora ? '' : 'Elige a qué hora quieres el aviso.'}</small>
+        <div class="botones"><button class="btn" onclick="document.getElementById('capa-aviso').remove()">Cerrar</button></div></div>`;
+    document.body.appendChild(capa);
+}
+function alarmaDatos() {
+    const f = document.getElementById('al-fecha').value, h = document.getElementById('al-hora').value, est = document.getElementById('al-estado');
+    if (!f || !h) { est.textContent = 'Pon el día y la hora.'; return null; }
+    const inicio = new Date(f + 'T' + h), antes = +document.getElementById('al-antes').value, diario = !!document.getElementById('al-diario')?.checked;
+    return { titulo: avisoActual.titulo, notas: avisoActual.notas || '', inicio, antes, suena: new Date(inicio.getTime() - antes * 60000), est,
+        hasta: diario ? avisoActual.hasta : '' };
+}
+function alarmaReloj() {
+    const a = alarmaDatos(); if (!a) return;
+    const falta = a.suena - Date.now();
+    if (falta < 0) { a.est.textContent = '⚠️ Esa hora ya ha pasado.'; return; }
+    if (falta > 24 * 3600000 && !a.hasta) { a.est.textContent = '⚠️ El Reloj solo pone alarmas para las próximas 24 horas (no sabe de días). Para más adelante usa «Al calendario del móvil».'; return; }
+    const msj = encodeURIComponent(('⏰ ' + a.titulo).slice(0, 60));
+    location.href = `intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.alarm.HOUR=${a.suena.getHours()};` +
+        `i.android.intent.extra.alarm.MINUTES=${a.suena.getMinutes()};S.android.intent.extra.alarm.MESSAGE=${msj};B.android.intent.extra.alarm.SKIP_UI=false;end`;
+    // Si el móvil no deja abrir el Reloj, la app sigue delante: se avisa
+    let fuera = false; const marca = () => { fuera = true; };
+    document.addEventListener('visibilitychange', marca, { once: true }); window.addEventListener('blur', marca, { once: true });
+    a.est.textContent = '⏳ Abriendo el Reloj...';
+    setTimeout(() => { a.est.textContent = fuera ? (a.hasta ? '✅ En el Reloj, marca los días de la semana para que se repita, y bórrala después del examen.' : '✅ Comprueba en el Reloj que la alarma ha quedado puesta.') :
+        '❌ Este móvil no deja abrir el Reloj desde la app. Usa «Al calendario del móvil».'; }, 2500);
+}
+function alarmaCalendario() {
+    const a = alarmaDatos(); if (!a) return;
+    const sello = d => d.getFullYear() + dos(d.getMonth() + 1) + dos(d.getDate()) + 'T' + dos(d.getHours()) + dos(d.getMinutes()) + '00';
+    const fin = new Date(a.inicio.getTime() + 30 * 60000), regla = a.hasta ? 'RRULE:FREQ=DAILY;UNTIL=' + a.hasta.replace(/-/g, '') + 'T235959' : '';
+    if (esAndroid()) {
+        // Google Calendar no deja fijar el aviso por enlace: sale el que tenga cada uno por defecto y se cambia antes de guardar
+        const url = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(a.titulo) +
+            '&dates=' + sello(a.inicio) + '/' + sello(fin) + '&ctz=Europe/Madrid' + (a.notas ? '&details=' + encodeURIComponent(a.notas) : '') +
+            (regla ? '&recur=' + encodeURIComponent(regla) : '');
+        window.open(url, '_blank');
+        a.est.textContent = '📅 En Google Calendar, antes de Guardar, mira la línea de la campanita 🔔 (notificación) y pon «' +
+            document.getElementById('al-antes').selectedOptions[0].text.toLowerCase() + '».';
+        return;
+    }
+    const txt = s => String(s).replace(/\\/g, '\\\\').replace(/[,;]/g, m => '\\' + m).replace(/\r?\n/g, '\\n');
+    const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Agenda Familia//ES', 'BEGIN:VEVENT',
+        'UID:' + Date.now() + '@agenda-familia', 'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, ''),
+        'DTSTART:' + sello(a.inicio), 'DTEND:' + sello(fin), 'SUMMARY:' + txt(a.titulo)]
+        .concat(regla ? [regla] : []).concat(a.notas ? ['DESCRIPTION:' + txt(a.notas)] : [])
+        .concat(['BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + txt(a.titulo), 'TRIGGER:-PT' + a.antes + 'M', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR']).join('\r\n');
+    const enlace = document.createElement('a');
+    enlace.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }));
+    enlace.download = 'aviso.ics'; document.body.appendChild(enlace); enlace.click(); enlace.remove();
+    a.est.textContent = '📅 Abre el archivo «aviso.ics» y pulsa «Añadir» al calendario. El aviso ya va puesto.';
+}
+
+// ---------- 🔎 Buscar en Google o preguntar a la IA ----------
+const esAdulto = () => miembro(cfg.yo)?.rol === 'padre';
+function abrirBuscar() {
+    abrirModal(`<h3>🔎 Buscar o preguntar</h3>
+        <div class="con-micro"><input id="bu-texto" placeholder="¿Qué quieres saber?" enterkeyhint="search" onkeydown="if(event.key==='Enter')buscarGoogle()"><button onclick="dictar('bu-texto')">🎤</button></div>
+        <div class="botones"><button class="btn" onclick="buscarGoogle()">🌐 Buscar en Google</button><button class="btn pri" style="background:linear-gradient(135deg,#7c3aed,#db2777)" id="bu-ia" onclick="preguntarIA()">✨ Preguntar a la IA</button></div>
+        <div id="bu-respuesta"></div>
+        <small class="ayuda">La IA está para ayudarte a estudiar y entender las cosas.${esAdulto() ? '' : ' Papá y mamá pueden ver las preguntas.'}</small>
+        ${esAdulto() ? `<div class="botones"><button class="btn" onclick="verPreguntas()">📜 Ver lo que se ha preguntado a la IA</button></div>` : ''}
+        <div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button></div>`);
+    setTimeout(() => document.getElementById('bu-texto')?.focus(), 200);
+}
+function buscarGoogle() {
+    const t = val('bu-texto');
+    if (!t) { avisar('✍️ Escribe qué buscar'); return; }
+    // Los chicos (y si no se ha dicho quién usa el móvil) con SafeSearch
+    window.open('https://www.google.com/search?q=' + encodeURIComponent(t) + (esAdulto() ? '' : '&safe=active'), '_blank');
+}
+async function preguntarIA() {
+    const t = val('bu-texto');
+    if (!t) { avisar('✍️ Escribe la pregunta'); return; }
+    if (!cfg.url) { avisar('⚠️ La IA funciona con la hoja conectada (⚙️ Ajustes)'); return; }
+    const boton = document.getElementById('bu-ia'), caja = document.getElementById('bu-respuesta'), yo = miembro(cfg.yo);
+    boton.disabled = true; boton.textContent = '⏳ Pensando…';
+    try {
+        const r = await fetch(cfg.url, { method: 'POST', body: JSON.stringify({ clave: cfg.clave,
+            pregunta: { texto: t, quien: yo ? yo.nombre : '', curso: (yo && yo.curso) || '', adulto: esAdulto() } }) });
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error);
+        caja.innerHTML = `<div class="tarjeta" style="margin-top:12px;background:#f5f3ff"><b>✨ ${esc(t)}</b><p style="white-space:pre-wrap;line-height:1.5;margin:8px 0 0">${esc(j.respuesta)}</p></div>`;
+    } catch (e) { avisar('⚠️ ' + e.message); }
+    boton.disabled = false; boton.textContent = '✨ Preguntar a la IA';
+}
+async function verPreguntas() {
+    const caja = document.getElementById('bu-respuesta');
+    caja.innerHTML = '<div class="vacio" style="margin-top:12px">⏳ Cargando…</div>';
+    try {
+        const r = await fetch(cfg.url, { method: 'POST', body: JSON.stringify({ clave: cfg.clave, verPreguntas: true }) });
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error);
+        caja.innerHTML = j.preguntas.length ? '<h2>Últimas preguntas</h2>' + j.preguntas.map(q => `<details class="tarjeta"><summary><b>${esc(q.quien || '¿?')}</b> · ${esc(q.fecha)}<br>${esc(q.pregunta)}</summary><p>${esc(q.respuesta)}</p></details>`).join('')
+            : '<div class="vacio" style="margin-top:12px">Todavía nadie ha preguntado nada</div>';
+    } catch (e) { caja.innerHTML = ''; avisar('⚠️ ' + e.message); }
+}
+
+function editarTarea(id) {
+    const t = id ? D.tareas.find(x => x.id === id) : { id: '', titulo: '', quien: filtro || (miembro(cfg.yo)?.rol === 'hijo' ? cfg.yo : ''), puntos: '1', repetir: 'diaria', fecha: hoyIso() };
+    if (!t) return;
+    abrirModal(`<h3>${id ? '✏️ Cambiar tarea' : '⭐ Nueva tarea de casa'}</h3>
+        <label class="et">Tarea</label><div class="con-micro"><input id="ta-titulo" value="${esc(t.titulo)}" placeholder="Recoger la habitación, poner la mesa…"><button onclick="dictar('ta-titulo')">🎤</button></div>
+        <label class="et">¿Quién?</label>${chipsQuien(lista(t.quien), false)}
+        <label class="et">Puntos</label><div class="chips" id="pts">${[1, 2, 3, 5, 10].map(p => `<button type="button" class="chip ${String(t.puntos) === String(p) ? 'on' : ''}" onclick="document.querySelectorAll('#pts .chip').forEach(x=>x.classList.remove('on'));this.classList.add('on')">⭐ ${p}</button>`).join('')}</div>
+        <div class="dos"><div><label class="et">¿Cuándo?</label><select id="ta-repetir"><option value="diaria">Cada día</option><option value="semanal" ${t.repetir === 'semanal' ? 'selected' : ''}>Cada semana</option><option value="una" ${t.repetir === 'una' ? 'selected' : ''}>Una vez</option></select></div>
+        <div><label class="et">Desde / día</label><input type="date" id="ta-fecha" value="${t.fecha}"></div></div>
+        <div class="botones"><button class="btn pri" onclick="guardarTarea('${t.id}')">💾 Guardar</button><button class="btn" onclick="cerrarModal()">Cancelar</button></div>
+        ${id ? `<div class="botones"><button class="btn peligro" onclick="if(confirm('¿Borrar esta tarea?')){borrar('tareas','${t.id}');cerrarModal()}">🗑️ Borrar tarea</button></div>` : ''}`);
+}
+function guardarTarea(id) {
+    const titulo = document.getElementById('ta-titulo').value.trim();
+    if (!titulo) { avisar('✍️ Escribe la tarea'); return; }
+    const viejo = id ? D.tareas.find(x => x.id === id) : null;
+    guardar('tareas', {
+        id: id || nuevoId(), titulo, quien: quienElegido(),
+        puntos: (document.querySelector('#pts .chip.on')?.textContent.replace(/\D/g, '')) || '1',
+        repetir: document.getElementById('ta-repetir').value, fecha: document.getElementById('ta-fecha').value || hoyIso(),
+        hecho: viejo ? viejo.hecho : ''
+    });
+    avisar('✅ Tarea guardada'); cerrarModal();
+}
+
+const EMOJIS = ['👨', '👩', '🧒', '👦', '👧', '🧑', '👴', '👵', '🐶', '🐱', '⚽', '🎨', '🎮', '🦄', '🚀', '🌟'];
+function editarMiembro(id) {
+    const m = id ? miembro(id) : { id: '', nombre: '', emoji: '🧒', color: COLORES[D.miembros.length % COLORES.length], rol: 'hijo' };
+    abrirModal(`<h3>${id ? '✏️ ' + esc(m.nombre) : '＋ Añadir a la familia'}</h3>
+        <label class="et">Nombre</label><input id="mi-nombre" value="${esc(m.nombre)}" placeholder="Nombre">
+        <label class="et">Curso (lo usa la IA)</label><input id="mi-curso" value="${esc(m.curso || '')}" placeholder="1º ESO">
+        <label class="et">Dibujo</label><div class="chips" style="flex-wrap:wrap" id="mi-emoji">${EMOJIS.map(e => `<button type="button" class="chip ${m.emoji === e ? 'on' : ''}" onclick="document.querySelectorAll('#mi-emoji .chip').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${e}</button>`).join('')}</div>
+        <label class="et">Color</label><div class="chips" style="flex-wrap:wrap" id="mi-color">${COLORES.map(c => `<button type="button" class="chip ${m.color === c ? 'on' : ''}" data-c="${c}" style="--c:${c};width:40px;height:40px;background:${c}" onclick="document.querySelectorAll('#mi-color .chip').forEach(x=>x.classList.remove('on'));this.classList.add('on')"></button>`).join('')}</div>
+        <label class="et">Es…</label><select id="mi-rol"><option value="hijo">Hijo/a (suma puntos con las tareas)</option><option value="padre" ${m.rol === 'padre' ? 'selected' : ''}>Adulto</option></select>
+        <div class="botones"><button class="btn pri" onclick="guardarMiembro('${m.id}')">💾 Guardar</button><button class="btn" onclick="cerrarModal()">Cancelar</button></div>
+        ${id && D.miembros.length > 1 ? `<div class="botones"><button class="btn peligro" onclick="if(confirm('¿Quitar a ${esc(m.nombre)}? Sus notas se quedan, como «Todos».')){borrar('miembros','${m.id}');cerrarModal()}">🗑️ Quitar</button></div>` : ''}`);
+}
+function guardarMiembro(id) {
+    const nombre = document.getElementById('mi-nombre').value.trim();
+    if (!nombre) { avisar('✍️ Escribe el nombre'); return; }
+    guardar('miembros', { id: id || nuevoId(), nombre, emoji: document.querySelector('#mi-emoji .chip.on')?.textContent || '🙂',
+        color: document.querySelector('#mi-color .chip.on')?.dataset.c || COLORES[0], rol: document.getElementById('mi-rol').value, curso: val('mi-curso') });
+    cerrarModal();
+}
+
+// ---------- Exámenes: fecha, temario (fotos/PDF en Drive), plan de estudio día a día con marcas ----------
+const planDe = x => { try { return JSON.parse((x && x.plan) || '[]'); } catch (e) { return []; } };
+const fotosDe = x => { try { return JSON.parse((x && x.fotos) || '[]'); } catch (e) { return []; } };
+const val = id => (document.getElementById(id)?.value || '').trim();
+function progreso(x) {
+    const pl = planDe(x), h = lista(x && x.hecho), hoy = hoyIso();
+    const hechos = pl.filter((p, i) => h.includes(String(i))).length;
+    const atrasados = pl.filter((p, i) => p.f < hoy && !h.includes(String(i))).length;
+    return { total: pl.length, hechos, atrasados };
+}
+// Pasos de estudio de un día. Hoy salen también los atrasados, para no perderlos.
+function estudioDe(fecha) {
+    const hoy = hoyIso(), r = [];
+    D.examenes.filter(pasaFiltro).forEach(x => {
+        if (x.fecha < hoy) return;
+        planDe(x).forEach((p, i) => {
+            const hecho = lista(x.hecho).includes(String(i));
+            if (p.f === fecha || (fecha === hoy && p.f < hoy && !hecho)) r.push({ x, p, i, hecho });
+        });
+    });
+    return r;
+}
+function itemPaso({ x, p, i, hecho }, fecha) {
+    const m = miembro(x.quien), atrasado = p.f < fecha && !hecho;
+    return `<div class="item ${hecho ? 'hecho' : ''}" style="border-left-color:${m ? m.color : '#94a3b8'}" onclick="abrirExamen('${x.id}')">
+        <div class="ico">📖</div>
+        <div class="txt"><div class="tit">${esc(p.t)}</div><div class="sub">${esc(x.asignatura)}${m ? ' · ' + m.emoji + ' ' + esc(m.nombre) : ''}${atrasado ? ' · ⏰ era del ' + nombreDia(p.f).split(' de ')[0] : ''}</div></div>
+        <button class="check" onclick="event.stopPropagation();marcarPaso('${x.id}',${i})">${hecho ? '✓' : ''}</button></div>`;
+}
+
+// El plan: reparte los temas entre los días que quedan. Cuantos más días, más pasos por tema
+// (leer, esquema, ejercicios y repaso espaciado). Los dos últimos días: simulacro y repaso final.
+function hacerPlan(temasTxt, desde, examen, findes) {
+    const temas = String(temasTxt || '').split('\n').map(s => s.trim()).filter(Boolean);
+    const dias = [];
+    for (let f = desde; f < examen; f = sumarDias(f, 1)) { const d = deIso(f).getDay(); if (!findes || (d !== 0 && d !== 6)) dias.push(f); }
+    if (!dias.length || !temas.length) return [];
+    const finales = [];
+    if (dias.length >= 4) finales.push('🧪 Simulacro: hazte un examen de prueba de todos los temas y repasa los fallos');
+    if (dias.length >= 2) finales.push('🌙 Repaso final: lee tus esquemas, prepara la mochila y duerme bien');
+    const R = dias.length - finales.length, n = temas.length, tareas = [];
+    if (R >= n * 4) {
+        temas.forEach((t, k) => {
+            tareas.push('📖 Leer y subrayar: ' + t, '✏️ Esquema o resumen: ' + t, '❓ Ejercicios y preguntas: ' + t);
+            if (k) tareas.push('🔁 Repasar sin mirar (explícalo en voz alta): ' + temas[k - 1]);
+        });
+        tareas.push('🔁 Repasar sin mirar (explícalo en voz alta): ' + temas[n - 1]);
+    } else if (R >= n * 3) temas.forEach(t => tareas.push('📖 Leer y subrayar: ' + t, '✏️ Esquema o resumen: ' + t, '❓ Ejercicios y preguntas: ' + t));
+    else if (R >= n * 2) temas.forEach(t => tareas.push('📖 Leer, subrayar y esquema: ' + t, '❓ Ejercicios y repaso: ' + t));
+    else temas.forEach(t => tareas.push('📖 Estudiar (leer, esquema y ejercicios): ' + t));
+    const plan = tareas.map((t, i) => ({ f: dias[Math.floor(i * R / tareas.length)], t }));
+    finales.forEach((t, i) => plan.push({ f: dias[R + i], t }));
+    return plan;
+}
+
+function vistaExamenes() {
+    const hoy = hoyIso(), todos = D.examenes.filter(pasaFiltro).sort((a, b) => a.fecha.localeCompare(b.fecha));
+    const prox = todos.filter(x => x.fecha >= hoy), pasados = todos.filter(x => x.fecha < hoy).reverse().slice(0, 10);
+    const tarjeta = x => {
+        const m = miembro(x.quien), pr = progreso(x), dias = Math.round((deIso(x.fecha) - deIso(hoy)) / 86400000);
+        const cuando = dias === 0 ? '¡HOY!' : dias === 1 ? 'Mañana' : dias > 1 ? 'Faltan ' + dias + ' días' : (x.nota ? 'Nota: ' + esc(x.nota) : '');
+        return `<div class="item ${dias >= 0 ? 'importante' : ''}" style="border-left-color:${m ? m.color : '#94a3b8'};display:block" onclick="abrirExamen('${x.id}')">
+            <div style="display:flex;gap:10px;align-items:center"><div class="ico">📝</div>
+            <div class="txt"><div class="tit">${esc(x.asignatura)}</div><div class="sub">${m ? m.emoji + ' ' + esc(m.nombre) + ' · ' : ''}${nombreDia(x.fecha)}</div></div>
+            <b style="color:${dias >= 0 && dias <= 3 ? '#dc2626' : 'var(--azul)'};font-size:14px;text-align:right">${cuando}</b></div>
+            ${dias < 0 ? '' : pr.total ? `<div class="barra"><i style="width:${Math.round(pr.hechos * 100 / pr.total)}%"></i></div><div class="sub" style="margin-top:4px">${pr.hechos} de ${pr.total} pasos · ${pr.atrasados ? '⚠️ ' + pr.atrasados + ' atrasados' : '✅ va al día'}</div>`
+                : '<div class="sub" style="margin-top:6px">Sin plan de estudio: tócalo para hacerlo</div>'}</div>`;
+    };
+    return chipsFiltro() + `<h2>Próximos exámenes</h2>` + (prox.length ? prox.map(tarjeta).join('') : `<div class="vacio">No hay exámenes apuntados.<br>Pulsa ＋ para añadir uno.</div>`) +
+        (pasados.length ? `<h2>Ya hechos</h2>` + pasados.map(tarjeta).join('') : '');
+}
+
+function nuevoExamen() {
+    const quien = filtro || (miembro(cfg.yo)?.rol === 'hijo' ? cfg.yo : (D.miembros.find(m => m.rol === 'hijo') || {}).id || '');
+    abrirModal(`<h3>📝 Nuevo examen</h3>
+        <label class="et">Asignatura</label><div class="con-micro"><input id="ex-asig" placeholder="Matemáticas, Lengua, Inglés…"><button onclick="dictar('ex-asig')">🎤</button></div>
+        <label class="et">¿De quién?</label>${chipsQuien([quien], false)}
+        <div class="dos"><div><label class="et">Fecha del examen</label><input type="date" id="ex-fecha" value="${sumarDias(hoyIso(), 7)}"></div><div><label class="et">Hora (si hay)</label><input type="time" id="ex-hora"></div></div>
+        <label class="et">Temas que entran (uno por línea)</label><textarea id="ex-temas" placeholder="Tema 4: Fracciones&#10;Tema 5: Números decimales"></textarea>
+        <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:15px"><input type="checkbox" id="ex-findes" style="width:auto"> Descansar sábados y domingos</label>
+        <small class="ayuda">Con los temas se hace solo el plan de estudio día a día. Luego podrás añadir las fotos del temario.</small>
+        <div class="botones"><button class="btn pri" onclick="crearExamen()">Crear y ver el plan ›</button><button class="btn" onclick="cerrarModal()">Cancelar</button></div>`);
+    setTimeout(() => document.getElementById('ex-asig')?.focus(), 200);
+}
+function crearExamen() {
+    const asignatura = val('ex-asig');
+    if (!asignatura) { avisar('✍️ Escribe la asignatura'); return; }
+    const x = { id: nuevoId(), quien: quienElegido(), asignatura, fecha: val('ex-fecha') || sumarDias(hoyIso(), 7), hora: val('ex-hora'),
+        temas: val('ex-temas'), plan: '', hecho: '', fotos: '', notebook: '', notas: '', nota: '', ia: '' };
+    if (x.temas) x.plan = JSON.stringify(hacerPlan(x.temas, hoyIso(), x.fecha, document.getElementById('ex-findes').checked));
+    guardar('examenes', x);
+    abrirExamen(x.id);
+}
+function abrirExamen(id) { abrirModal('<div id="modal-examen"></div>'); pintarExamen(id); }
+// Lo escrito en la ficha (sin guardar aún) se conserva al marcar pasos o subir fotos
+function camposExamen(x) {
+    if (!x || !document.getElementById('ex-notas')) return x;
+    return Object.assign({}, x, { temas: val('ex-temas'), notebook: val('ex-nb'), fecha: val('ex-fecha') || x.fecha, nota: val('ex-nota'), notas: val('ex-notas') });
+}
+function pintarExamen(id) {
+    const x = D.examenes.find(y => y.id === id), cont = document.getElementById('modal-examen');
+    if (!x || !cont) return;
+    const m = miembro(x.quien), pl = planDe(x), h = lista(x.hecho), hoy = hoyIso(), pr = progreso(x), fotos = fotosDe(x);
+    const dias = Math.round((deIso(x.fecha) - deIso(hoy)) / 86400000);
+    let planHtml = '', ult = '';
+    pl.forEach((p, i) => {
+        if (p.f !== ult) { ult = p.f; planHtml += `<div class="plan-dia ${p.f === hoy ? 'hoy' : ''}">${p.f === hoy ? '👉 HOY · ' : ''}${nombreDia(p.f)}</div>`; }
+        const hecho = h.includes(String(i));
+        planHtml += `<div class="paso ${hecho ? 'hecho' : ''}"><button class="check" onclick="marcarPaso('${x.id}',${i})">${hecho ? '✓' : ''}</button><span style="flex:1" onclick="cambiarPaso('${x.id}',${i})">${esc(p.t)}</span></div>`;
+    });
+    cont.innerHTML = `<h3>📝 ${esc(x.asignatura)}${m ? ' · ' + m.emoji + ' ' + esc(m.nombre) : ''}</h3>
+        <div style="color:var(--gris);font-size:14px">${nombreDia(x.fecha)}${x.hora ? ' a las ' + x.hora : ''} · ${dias > 1 ? 'faltan ' + dias + ' días' : dias === 1 ? 'es mañana' : dias === 0 ? '¡es hoy!' : 'ya pasó'}</div>
+        ${pr.total ? `<div class="barra" style="height:12px"><i style="width:${Math.round(pr.hechos * 100 / pr.total)}%"></i></div><div style="margin-top:5px;font-size:14px;color:var(--gris)">${pr.hechos} de ${pr.total} pasos · ${pr.atrasados ? '⚠️ ' + pr.atrasados + ' atrasados' : '✅ vas al día'}</div>` : ''}
+        <h2>Plan de estudio</h2>
+        ${pl.length ? planHtml + '<small class="ayuda">Toca el texto de un paso para cambiarlo.</small>' : '<div class="vacio">Sin plan todavía. Escribe los temas aquí abajo y pulsa «Hacer el plan».</div>'}
+        <h2>Temas que entran</h2>
+        <textarea id="ex-temas" placeholder="Un tema por línea">${esc(x.temas)}</textarea>
+        <label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:15px"><input type="checkbox" id="ex-findes" style="width:auto"> Descansar sábados y domingos</label>
+        <div class="botones"><button class="btn pri" onclick="rehacerPlan('${x.id}')">📅 ${pl.length ? 'Rehacer' : 'Hacer'} el plan desde hoy</button></div>
+        <h2>Temario (fotos o PDF)</h2>
+        <div class="fotos">${fotos.map(f => `<a href="https://drive.google.com/file/d/${f.id}/view" target="_blank">${String(f.t).startsWith('image') ? `<img src="https://drive.google.com/thumbnail?id=${f.id}&sz=w200" style="width:100%;height:100%;object-fit:cover" alt="">` : '📄'}</a>`).join('')}
+            <label>📷<input type="file" accept="image/*,application/pdf" multiple style="display:none" onchange="subirTemario('${x.id}',this.files)"></label></div>
+        <small class="ayuda" id="ex-subida">${cfg.url ? 'Se guardan en tu Google Drive (carpeta «Agenda Familia - Temarios»).' : '⚠️ Para guardar el temario hay que conectar la hoja (⚙️ Ajustes).'}</small>
+        <h2>⏰ Avisos</h2>
+        <div class="botones" style="margin-top:0"><button class="btn" onclick="avisoExamen('${x.id}')">📝 Avisarme del examen</button><button class="btn" onclick="avisoEstudio('${x.id}')">📖 Recordarme estudiar cada día</button></div>
+        <h2>✨ Ayuda de la IA</h2>
+        <button class="btn pri" style="width:100%;background:linear-gradient(135deg,#7c3aed,#db2777)" id="btn-ia" onclick="leerConIA('${x.id}')">✨ Leer el temario y hacer el plan</button>
+        <small class="ayuda">Claude lee las fotos (o los temas escritos), saca los temas, hace un plan a medida hasta el examen y un resumen con preguntas de cada tema. Tarda un minuto.</small>
+        ${resumenIA(x)}
+        <h2>NotebookLM</h2>
+        <div class="con-micro"><input id="ex-nb" value="${esc(x.notebook)}" placeholder="Enlace del cuaderno de este examen"><button onclick="abrirNotebook()">📓</button></div>
+        <small class="ayuda">En NotebookLM, crea un cuaderno con el temario: hace resúmenes, preguntas y hasta un audio para repasar. Pega aquí su enlace y se abre con 📓.</small>
+        <div class="dos"><div><label class="et">Fecha del examen</label><input type="date" id="ex-fecha" value="${x.fecha}"></div><div><label class="et">Nota sacada</label><input id="ex-nota" value="${esc(x.nota)}" placeholder="—" inputmode="decimal"></div></div>
+        <label class="et">Notas</label><textarea id="ex-notas" placeholder="Lo que dijo el profe, qué entra seguro…">${esc(x.notas)}</textarea>
+        <div class="botones"><button class="btn pri" onclick="guardarExamen('${x.id}')">💾 Guardar y cerrar</button></div>
+        <div class="botones"><button class="btn peligro" onclick="borrarExamen('${x.id}')">🗑️ Borrar examen</button></div>`;
+}
+function marcarPaso(id, i) {
+    const x = camposExamen(D.examenes.find(y => y.id === id));
+    if (!x) return;
+    const h = lista(x.hecho), k = String(i), ya = h.includes(k);
+    guardar('examenes', Object.assign(x, { hecho: (ya ? h.filter(v => v !== k) : h.concat(k)).join(',') }));
+    if (!ya) { const pr = progreso(x); avisar(pr.hechos >= pr.total ? '🏆 ¡Plan completo! A por el examen' : '💪 ¡Bien! Llevas ' + pr.hechos + ' de ' + pr.total); }
+    if (document.getElementById('modal-examen')) pintarExamen(id); else pintar();
+}
+function cambiarPaso(id, i) {
+    const x = camposExamen(D.examenes.find(y => y.id === id)), pl = planDe(x);
+    const t = prompt('Cambiar este paso:', pl[i].t);
+    if (t === null || !t.trim()) return;
+    pl[i].t = t.trim();
+    guardar('examenes', Object.assign(x, { plan: JSON.stringify(pl) }));
+    pintarExamen(id);
+}
+function rehacerPlan(id) {
+    const x = camposExamen(D.examenes.find(y => y.id === id));
+    if (!x.temas) { avisar('✍️ Escribe los temas, uno por línea'); return; }
+    if (lista(x.hecho).length && !confirm('El plan empieza de nuevo desde hoy y se quitan las marcas. ¿Seguir?')) return;
+    const plan = hacerPlan(x.temas, hoyIso(), x.fecha, document.getElementById('ex-findes').checked);
+    if (!plan.length) { avisar('📅 No quedan días antes del examen'); return; }
+    guardar('examenes', Object.assign(x, { plan: JSON.stringify(plan), hecho: '' }));
+    pintarExamen(id); avisar('📅 Plan hecho: ' + plan.length + ' pasos');
+}
+function guardarExamen(id) { guardar('examenes', camposExamen(D.examenes.find(y => y.id === id))); avisar('✅ Guardado'); cerrarModal(); }
+function borrarExamen(id) {
+    const x = D.examenes.find(y => y.id === id);
+    if (!confirm(`¿Borrar el examen de ${x.asignatura}? (Las fotos se quedan en Drive)`)) return;
+    borrar('examenes', id); cerrarModal(); avisar('🗑️ Borrado');
+}
+function resumenIA(x) {
+    let t;
+    try { t = JSON.parse(x.ia || '[]'); } catch (e) { t = []; }
+    if (!t.length) return '';
+    return `<h2>📚 Resúmenes y preguntas</h2>` + t.map(z => `<details class="tarjeta"><summary><b>${esc(z.titulo)}</b></summary><p>${esc(z.resumen)}</p>` +
+        (z.preguntas && z.preguntas.length ? `<b>¿Lo sabes? Pregúntate:</b><ol>${z.preguntas.map(q => `<li style="margin:5px 0">${esc(q)}</li>`).join('')}</ol>` : '') + `</details>`).join('');
+}
+// ✨ La IA la llama el script de la hoja (allí está la clave de Anthropic, nunca en el móvil)
+async function leerConIA(id) {
+    if (!cfg.url) { avisar('⚠️ La IA funciona con la hoja conectada (⚙️ Ajustes)'); return; }
+    let x = camposExamen(D.examenes.find(y => y.id === id));
+    if (!fotosDe(x).length && !x.temas) { avisar('📷 Añade fotos del temario o escribe los temas'); return; }
+    if (lista(x.hecho).length && !confirm('La IA hace un plan nuevo desde hoy y se quitan las marcas. ¿Seguir?')) return;
+    guardar('examenes', x);
+    const boton = document.getElementById('btn-ia'), hoy = hoyIso();
+    boton.disabled = true; boton.textContent = '⏳ Leyendo el temario… (1-2 minutos)';
+    try {
+        const r = await fetch(cfg.url, { method: 'POST', body: JSON.stringify({ clave: cfg.clave, ia: {
+            asignatura: x.asignatura, curso: miembro(x.quien)?.curso || 'ESO', temas: x.temas, fotos: fotosDe(x).map(f => f.id),
+            hoy, examen: x.fecha, findes: document.getElementById('ex-findes').checked } }) });
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error);
+        const plan = (j.plan || []).filter(p => p && p.tarea && /^\d{4}-\d{2}-\d{2}$/.test(p.fecha) && p.fecha >= hoy && p.fecha < x.fecha)
+            .map(p => ({ f: p.fecha, t: p.tarea })).sort((a, b) => a.f.localeCompare(b.f));
+        if (!plan.length) throw new Error('la IA no devolvió un plan válido');
+        x = camposExamen(D.examenes.find(y => y.id === id));
+        guardar('examenes', Object.assign(x, { temas: (j.temas || []).map(t => t.titulo).join('\n') || x.temas,
+            plan: JSON.stringify(plan), hecho: '', ia: JSON.stringify(j.temas || []) }));
+        avisar('✨ Plan hecho: ' + plan.length + ' pasos y ' + (j.temas || []).length + ' resúmenes');
+    } catch (e) { avisar('⚠️ ' + e.message); }
+    pintarExamen(id);
+}
+function abrirNotebook() { window.open(val('ex-nb') || 'https://notebooklm.google.com/', '_blank'); }
+
+// Fotos del temario: se reducen en el móvil (más rápido) y se guardan en el Drive de la cuenta de la hoja
+async function subirTemario(id, archivos) {
+    if (!cfg.url) { avisar('⚠️ Conecta la hoja en ⚙️ Ajustes para guardar el temario'); return; }
+    const info = document.getElementById('ex-subida'), fotos = fotosDe(D.examenes.find(y => y.id === id)), lista_ = [...archivos];
+    const asignatura = D.examenes.find(y => y.id === id).asignatura;
+    for (let n = 0; n < lista_.length; n++) {
+        const f = lista_[n], imagen = f.type.startsWith('image');
+        if (!imagen && f.size > 20e6) { avisar('📄 ' + f.name + ' es muy grande (máx. 20 MB)'); continue; }
+        if (info) info.textContent = `⏳ Subiendo ${n + 1} de ${lista_.length}…`;
+        try {
+            const datos = imagen ? await reducirImagen(f) : await aBase64(f), tipo = imagen ? 'image/jpeg' : (f.type || 'application/pdf');
+            const r = await fetch(cfg.url, { method: 'POST', body: JSON.stringify({ clave: cfg.clave, subir: { nombre: asignatura + ' - ' + (f.name || 'foto'), tipo, datos } }) });
+            const j = await r.json();
+            if (!j.ok) throw new Error(j.error);
+            fotos.push({ id: j.id, t: tipo });
+        } catch (e) { avisar('⚠️ No se pudo subir: ' + e.message); break; }
+    }
+    guardar('examenes', Object.assign(camposExamen(D.examenes.find(y => y.id === id)), { fotos: JSON.stringify(fotos) }));
+    pintarExamen(id);
+}
+function reducirImagen(f) {
+    return new Promise((ok, mal) => {
+        const img = new Image();
+        img.onload = () => {
+            const k = Math.min(1, 1800 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+            c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            URL.revokeObjectURL(img.src);
+            ok(c.toDataURL('image/jpeg', 0.82).split(',')[1]);
+        };
+        img.onerror = () => mal(new Error('la imagen no se puede leer'));
+        img.src = URL.createObjectURL(f);
+    });
+}
+function aBase64(f) { return new Promise((ok, mal) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = () => mal(new Error('no se pudo leer')); r.readAsDataURL(f); }); }
+
+// ---------- Utilidades ----------
+function avisar(t) {
+    const a = document.createElement('div'); a.className = 'aviso'; a.textContent = t;
+    document.body.appendChild(a); setTimeout(() => a.remove(), 2200);
+}
+// Dictar por voz (como en el calendario de 360)
+function dictar(idCampo) {
+    const R = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!R) { avisar('🎤 Este móvil no deja dictar aquí: usa el micro del teclado'); return; }
+    const r = new R(); r.lang = 'es-ES'; r.interimResults = false;
+    const c = document.getElementById(idCampo);
+    avisar('🎤 Habla ahora…');
+    r.onresult = ev => { const t = ev.results[0][0].transcript; c.value = c.value ? c.value + ' ' + t : t.charAt(0).toUpperCase() + t.slice(1); };
+    r.onerror = () => avisar('🎤 No te he oído, prueba otra vez');
+    r.start();
+}
+
+// ---------- Aviso de versión nueva (como en 360): version.json junto a la app ----------
+let versionMirada = 0;
+async function mirarVersionNueva() {
+    if (Date.now() - versionMirada < 10 * 60000 || !navigator.onLine || location.protocol === 'file:') return;
+    versionMirada = Date.now();
+    try {
+        const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+        const nueva = Number((await r.json()).version) || 0;
+        if (nueva > VERSION_APP) abrirModal(`<div style="text-align:center"><div style="font-size:54px">🔄</div><h3>Hay una versión nueva (v${nueva})</h3>
+            <p style="color:var(--gris)">Tienes la v${VERSION_APP}. Toca Actualizar; si sigue igual, cierra la app del todo y vuelve a abrirla.</p>
+            <div class="botones"><button class="btn pri" onclick="actualizarYa()">🔄 Actualizar</button><button class="btn" onclick="cerrarModal()">Luego</button></div></div>`);
+    } catch (e) {}
+}
+async function actualizarYa() {
+    try { const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (reg) await reg.update(); } catch (e) {}
+    location.reload();
+}
+
+// ---------- Arranque ----------
+if (!miembro(cfg.yo)) cfg.yo = '';
+if (miembro(cfg.yo)?.rol === 'hijo') filtro = cfg.yo;
+pintar();
+sincronizar();
+setTimeout(mirarVersionNueva, 3000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { sincronizar(); mirarVersionNueva(); pintar(); } });
+setInterval(() => { if (document.visibilityState === 'visible' && !document.querySelector('.fondo-modal')) sincronizar(); }, 120000);
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {});
+    const habia = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (habia) location.reload(); });
+}
+</script>
+</body>
+</html>
