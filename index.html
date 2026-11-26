@@ -136,12 +136,12 @@
 
 <script>
 // ==========================================
-// AGENDA FAMILIA · v1 (25/11/2026)
+// AGENDA FAMILIA · v1 (25/11/2026) · v3 (26/11): PDF grandes del temario reducidos en el móvil
 // Hecha a partir de las ideas de MOVILEC 360 (calendario, marcar hecho, dictar, aviso de versión),
 // pero separada del todo: su propia web y su propia hoja de Google (cuenta personal).
 // Los datos se guardan en el móvil y, si hay conexión configurada, se comparten con la hoja (Codigo.gs).
 // ==========================================
-const VERSION_APP = 2;
+const VERSION_APP = 3;
 const TIPOS = {
     deberes: ['📚', 'Deberes'], examen: ['📝', 'Examen'], actividad: ['⚽', 'Actividad'],
     medico: ['🩺', 'Médico'], cumple: ['🎂', 'Cumpleaños'], viaje: ['✈️', 'Viaje'], otro: ['📌', 'Otro']
@@ -773,7 +773,7 @@ function pintarExamen(id) {
         <h2>Temario (fotos o PDF)</h2>
         <div class="fotos">${fotos.map(f => `<a href="https://drive.google.com/file/d/${f.id}/view" target="_blank">${String(f.t).startsWith('image') ? `<img src="https://drive.google.com/thumbnail?id=${f.id}&sz=w200" style="width:100%;height:100%;object-fit:cover" alt="">` : '📄'}</a>`).join('')}
             <label>📷<input type="file" accept="image/*,application/pdf" multiple style="display:none" onchange="subirTemario('${x.id}',this.files)"></label></div>
-        <small class="ayuda" id="ex-subida">${cfg.url ? 'Se guardan en tu Google Drive (carpeta «Agenda Familia - Temarios»).' : '⚠️ Para guardar el temario hay que conectar la hoja (⚙️ Ajustes).'}</small>
+        <small class="ayuda" id="ex-subida">${cfg.url ? 'Se guardan en tu Google Drive (carpeta «Agenda Familia - Temarios»). Los PDF grandes se reducen solos.' : '⚠️ Para guardar el temario hay que conectar la hoja (⚙️ Ajustes).'}</small>
         <h2>⏰ Avisos</h2>
         <div class="botones" style="margin-top:0"><button class="btn" onclick="avisoExamen('${x.id}')">📝 Avisarme del examen</button><button class="btn" onclick="avisoEstudio('${x.id}')">📖 Recordarme estudiar cada día</button></div>
         <h2>✨ Ayuda de la IA</h2>
@@ -860,10 +860,11 @@ async function subirTemario(id, archivos) {
     const asignatura = D.examenes.find(y => y.id === id).asignatura;
     for (let n = 0; n < lista_.length; n++) {
         const f = lista_[n], imagen = f.type.startsWith('image');
-        if (!imagen && f.size > 20e6) { avisar('📄 ' + f.name + ' es muy grande (máx. 20 MB)'); continue; }
         if (info) info.textContent = `⏳ Subiendo ${n + 1} de ${lista_.length}…`;
         try {
-            const datos = imagen ? await reducirImagen(f) : await aBase64(f), tipo = imagen ? 'image/jpeg' : (f.type || 'application/pdf');
+            const datos = imagen ? await reducirImagen(f) : await prepararPdf(f, info), tipo = imagen ? 'image/jpeg' : 'application/pdf';
+            if (datos === null) continue;
+            if (info) info.textContent = `⏳ Subiendo ${n + 1} de ${lista_.length}…`;
             const r = await fetch(cfg.url, { method: 'POST', body: JSON.stringify({ clave: cfg.clave, subir: { nombre: asignatura + ' - ' + (f.name || 'foto'), tipo, datos } }) });
             const j = await r.json();
             if (!j.ok) throw new Error(j.error);
@@ -886,6 +887,66 @@ function reducirImagen(f) {
         img.onerror = () => mal(new Error('la imagen no se puede leer'));
         img.src = URL.createObjectURL(f);
     });
+}
+// v3 (26/11): PDF del temario. Los escaneados pesan mucho (cada página es una foto enorme) y la IA lee un número
+// limitado de páginas. Si el PDF pasa de 8 MB o de PDF_MAX_PAG páginas, se rehace en el móvil: se eligen las páginas
+// (si son muchas) y cada una se pasa a JPEG más pequeño con pdf.js, y se vuelve a juntar en un PDF con jsPDF.
+const PDF_MAX_PAG = 60;
+function cargarScript(src) {
+    return new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => mal(new Error('sin conexión para preparar el PDF')); document.head.appendChild(s); });
+}
+async function libreriasPdf() {
+    if (!window.pdfjsLib) await cargarScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    if (!window.jspdf) await cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+}
+// «12-40, 45» → [12, 13, …, 40, 45] (solo las que existen)
+function paginasElegidas(txt, total) {
+    const s = new Set();
+    String(txt).split(/[,;\s]+/).forEach(p => {
+        const m = p.match(/^(\d+)(?:-(\d+))?$/);
+        if (!m) return;
+        let a = +m[1], b = +(m[2] || m[1]);
+        if (a > b) [a, b] = [b, a];
+        for (let i = Math.max(1, a); i <= Math.min(total, b); i++) s.add(i);
+    });
+    return [...s].sort((a, b) => a - b);
+}
+// Devuelve el PDF en base64 listo para subir, o null si se cancela al elegir las páginas
+async function prepararPdf(f, info) {
+    if (info) info.textContent = '⏳ Mirando el PDF…';
+    try { await libreriasPdf(); }
+    catch (e) { if (f.size <= 20e6) return aBase64(f); throw e; }
+    const doc = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise;
+    if (doc.numPages <= PDF_MAX_PAG && f.size <= 8e6) { doc.destroy(); return aBase64(f); }
+    let pags = Array.from({ length: doc.numPages }, (_, i) => i + 1);
+    if (doc.numPages > PDF_MAX_PAG) {
+        const r = prompt(`El PDF tiene ${doc.numPages} páginas y la IA lee ${PDF_MAX_PAG} como mucho.\n¿Qué páginas entran en el examen? (ej.: 12-40 o 5-20, 31-35)`, '1-' + PDF_MAX_PAG);
+        if (r === null) { doc.destroy(); return null; }
+        pags = paginasElegidas(r, doc.numPages);
+        if (!pags.length) { doc.destroy(); throw new Error('no entiendo las páginas «' + r + '»'); }
+        if (pags.length > PDF_MAX_PAG) { avisar(`📄 Solo se suben las ${PDF_MAX_PAG} primeras páginas que has puesto`); pags = pags.slice(0, PDF_MAX_PAG); }
+    }
+    let pdf = null;
+    for (let n = 0; n < pags.length; n++) {
+        if (info) info.textContent = `⏳ Reduciendo el PDF: página ${n + 1} de ${pags.length}…`;
+        const p = await doc.getPage(pags[n]), v1 = p.getViewport({ scale: 1 });
+        const v = p.getViewport({ scale: 1700 / Math.max(v1.width, v1.height) });
+        const c = document.createElement('canvas');
+        c.width = Math.round(v.width); c.height = Math.round(v.height);
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+        await p.render({ canvasContext: ctx, viewport: v }).promise;
+        const o = c.width > c.height ? 'l' : 'p';
+        if (!pdf) pdf = new jspdf.jsPDF({ unit: 'pt', format: [c.width, c.height], orientation: o, compress: true });
+        else pdf.addPage([c.width, c.height], o);
+        pdf.addImage(c.toDataURL('image/jpeg', 0.6), 'JPEG', 0, 0, c.width, c.height);
+        p.cleanup(); c.width = c.height = 0;
+    }
+    doc.destroy();
+    const datos = pdf.output('datauristring').split(',')[1];
+    if (datos.length > 27e6) throw new Error('el PDF sigue siendo muy grande: elige menos páginas');
+    return datos;
 }
 function aBase64(f) { return new Promise((ok, mal) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = () => mal(new Error('no se pudo leer')); r.readAsDataURL(f); }); }
 
