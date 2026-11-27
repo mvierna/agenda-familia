@@ -62,7 +62,10 @@
     nav button { border: none; background: none; font-size: 12px; color: var(--gris); display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; min-width: 0; padding: 4px 0; font-size: 11px; }
     nav button span { font-size: 22px; }
     nav button.on { color: var(--azul); font-weight: 700; }
-    nav .mas { flex: none; background: var(--azul); color: #fff; width: 54px; height: 54px; border-radius: 18px; font-size: 30px; min-width: 0; margin-top: -22px; box-shadow: 0 4px 12px rgba(79,70,229,.4); justify-content: center; }
+    /* v5: la tecla de añadir es el 🎤 naranja de 360, dentro de la barra (antes el ＋ sobresalía por encima) */
+    nav .mas { flex: none; background: #f57c00; color: #fff; width: 76px; height: 52px; border-radius: 16px; min-width: 0; margin: 0 4px; box-shadow: 0 3px 0 #b85c00; justify-content: center; font-size: 11px; font-weight: 800; gap: 0; }
+    nav .mas span { font-size: 22px; line-height: 1.1; }
+    nav .mas:active { transform: translateY(3px); box-shadow: 0 0 0 #b85c00; }
     /* Ventanas */
     .fondo-modal { position: fixed; inset: 0; background: rgba(15,23,42,.5); z-index: 50; display: flex; align-items: flex-end; justify-content: center; }
     .modal { background: #fff; width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto; border-radius: 22px 22px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
@@ -152,7 +155,7 @@
 <nav>
     <button data-v="hoy" onclick="ir('hoy')"><span>🏠</span>Hoy</button>
     <button data-v="cal" onclick="ir('cal')"><span>📅</span>Calendario</button>
-    <button class="mas" onclick="nuevoSegunVista()">＋</button>
+    <button class="mas" onclick="nuevoSegunVista()"><span>🎤</span>Añadir</button>
     <button data-v="examenes" onclick="ir('examenes')"><span>📝</span>Exámenes</button>
     <button data-v="tareas" onclick="ir('tareas')"><span>⭐</span>Tareas</button>
     <button data-v="comidas" onclick="ir('comidas')"><span>🍽️</span>Comidas</button>
@@ -162,12 +165,12 @@
 <script>
 // ==========================================
 // AGENDA FAMILIA · v1 (25/11/2026) · v3 (26/11): PDF grandes del temario reducidos en el móvil
-// v4 (27/11): 📢 altavoz, 🎤 dictado de 360, deslizar ✓ hecha / 🗑️ borrar con Deshacer y papelera
+// v5 (27/11): la tecla de añadir es 🎤 y arranca el micrófono · v4 (27/11): 📢 altavoz, 🎤 dictado de 360, deslizar ✓ hecha / 🗑️ borrar con Deshacer y papelera
 // Hecha a partir de las ideas de MOVILEC 360 (calendario, marcar hecho, dictar, aviso de versión),
 // pero separada del todo: su propia web y su propia hoja de Google (cuenta personal).
 // Los datos se guardan en el móvil y, si hay conexión configurada, se comparten con la hoja (Codigo.gs).
 // ==========================================
-const VERSION_APP = 4;
+const VERSION_APP = 5;
 const TIPOS = {
     deberes: ['📚', 'Deberes'], examen: ['📝', 'Examen'], actividad: ['⚽', 'Actividad'],
     medico: ['🩺', 'Médico'], cumple: ['🎂', 'Cumpleaños'], viaje: ['✈️', 'Viaje'], otro: ['📌', 'Otro']
@@ -461,7 +464,12 @@ function abrirModal(html) {
     document.getElementById('capa-modal').innerHTML = `<div class="fondo-modal" onclick="if(event.target===this)cerrarModal()"><div class="modal">${html}</div></div>`;
 }
 function cerrarModal() { document.getElementById('capa-modal').innerHTML = ''; pintar(); }
-function nuevoSegunVista() { if (vista === 'comidas') editarPlato(null); else if (vista === 'examenes') nuevoExamen(); else if (vista === 'tareas') editarTarea(null); else editarEvento(null, vista === 'cal' ? diaSel : hoyIso()); }
+// 🎤 Añadir: abre la ficha nueva de la pantalla en la que se está y el micrófono ya escuchando (como «Dictar una nota» de 360)
+function nuevoSegunVista() {
+    if (vista === 'comidas') editarPlato(null); else if (vista === 'examenes') nuevoExamen(); else if (vista === 'tareas') editarTarea(null); else editarEvento(null, vista === 'cal' ? diaSel : hoyIso());
+    const campo = { comidas: 'pl-nombre', examenes: 'ex-asig', tareas: 'ta-titulo' }[vista] || 'ev-titulo';
+    if (document.getElementById(campo)) dictar(campo);
+}
 function chipsQuien(sel, multiple) {
     return `<div class="chips" style="flex-wrap:wrap" id="quien">` + (multiple ? `<button type="button" class="chip ${sel.length ? '' : 'on'}" data-id="" onclick="elegirQuien(this,true)">👪 Todos</button>` : '') +
         D.miembros.map(m => `<button type="button" class="chip ${sel.includes(m.id) ? 'on' : ''}" style="--c:${m.color}" data-id="${m.id}" onclick="elegirQuien(this,${multiple})">${cara(m)} ${esc(m.nombre)}</button>`).join('') + `</div>`;
