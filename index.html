@@ -131,10 +131,50 @@
     .dc-oido { background: #fff7ed; border-left: 4px solid #f57c00; border-radius: 10px; padding: 8px 10px; font-size: 14px; color: #444; margin-bottom: 6px; }
     .et-micro { display: flex; align-items: flex-end; justify-content: space-between; }
     .et-micro button { border: none; background: #fff3e0; color: #b85c00; border-radius: 10px; padding: 5px 10px; font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    /* 🎤 Fila de arriba de 360: «Dictar una nota» de lado a lado */
+    .cn-fila-anadir { display: flex; gap: 8px; margin: 2px 0 10px; }
+    .cn-btn-dictar { flex: 1; border: none; background: #f57c00; color: #fff; border-radius: 18px; padding: 14px 8px; font-size: 18px; font-weight: 900; box-shadow: 0 6px 16px rgba(239, 122, 26, 0.35); }
+    .cn-btn-escribir { flex: none; border: none; background: #fff; color: var(--azul); border-radius: 18px; padding: 0 16px; font-size: 15px; font-weight: 800; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .cn-btn-dictar:active, .cn-btn-escribir:active { transform: translateY(2px); }
+    /* 📋 Agenda por días (cnHtmlLista de 360) */
+    .cn-dia-fila { display: flex; gap: 10px; padding: 10px 0; }
+    .cn-dia-fila.hoy { background: #fff7ec; border-radius: 14px; padding-left: 4px; padding-right: 4px; }
+    .cn-dia-fecha { flex-shrink: 0; width: 54px; text-align: center; color: var(--azul); padding-top: 2px; }
+    .cn-dia-fecha small { display: block; font-size: 13px; font-weight: 900; text-transform: uppercase; }
+    .cn-dia-fecha b { display: block; font-size: 30px; line-height: 1; font-weight: 900; }
+    .cn-dia-fecha em { display: block; font-style: normal; font-size: 12px; font-weight: 900; text-transform: uppercase; }
+    .cn-dia-fila.hoy .cn-dia-fecha { color: #b8630a; }
+    .cn-dia-eventos { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .cn-dia-eventos .cn-ev { margin-bottom: 7px; }
+    .cn-dia-nada { color: #9aa3ab; font-size: 16px; padding: 12px 10px; background: #fff; border-radius: 14px; cursor: pointer; }
+    .cn-dia-mas { color: var(--azul); font-size: 14px; font-weight: 700; padding: 2px 8px 4px; cursor: pointer; }
+    .cn-dia-sub { font-size: 12px; font-weight: 800; color: var(--gris); text-transform: uppercase; letter-spacing: .4px; margin: 4px 2px 6px; }
+    .cn-dia-vacio { display: flex; align-items: center; gap: 10px; padding: 9px 4px; margin: 6px 0; background: #fff; border-radius: 14px; color: #8a96a3; font-size: 15px; cursor: pointer; }
+    .cn-dia-vacio b { width: 60px; flex-shrink: 0; text-align: center; color: var(--azul); font-size: 13px; white-space: nowrap; text-transform: uppercase; }
+    .cn-dia-vacio span { flex: 1; }
+    .cn-dia-vacio i { font-style: normal; font-weight: 900; color: var(--azul); font-size: 18px; padding-right: 6px; }
+    .cn-mas { width: 100%; margin-top: 10px; padding: 15px; border: 2px dashed #ccd3da; background: transparent; border-radius: 12px; font-weight: bold; color: #555; font-size: 16px; }
+    /* 📅 Notas como en la agenda de 360: hora, icono y quién a la izquierda; el texto entero a la derecha */
+    .cn-ev { display: flex; gap: 10px; background: #fff; border: 0; border-left: 6px solid #5a6270; border-radius: 16px; padding: 11px 12px; margin-bottom: 8px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+    .cn-ev.importante { background: #fff7ed; }
+    .cn-ev-hora { flex-shrink: 0; width: 66px; display: flex; flex-direction: column; align-items: center; text-align: center; font-size: 16px; font-weight: 900; color: #222; font-variant-numeric: tabular-nums; line-height: 1.2; }
+    .cn-ev-hora small { display: block; font-size: 12px; color: #777; }
+    .cn-ico { box-sizing: border-box; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; border: 3px solid #5a6270; font-size: 21px; margin-top: 5px; font-weight: normal; overflow: hidden; }
+    .cn-ico-et { margin-top: 3px; font-size: 11.5px; font-weight: 900; line-height: 1.1; max-width: 66px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+    .cn-ev-txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .cn-ev-txt b { font-size: 17px; line-height: 1.25; }
+    .cn-ev-txt em { display: block; font-style: normal; font-size: 14px; color: #666; margin-top: 3px; }
+    .cn-ev.cn-hecho { background: #f1f3f5; opacity: 0.75; }
+    .cn-ev.cn-hecho .cn-ev-txt b { text-decoration: line-through; color: #6c757d; }
+    .cn-ev .cn-hecha { display: block; color: #2e7d32; font-weight: 800; font-size: 14px; margin-top: 3px; }
+    /* 17/11 en 360: sin esto, Chrome en Android cortaba el gesto de deslizar */
+    .cn-ev[data-id], .item[data-tabla] { touch-action: pan-y; }
     /* 👈👉 Deslizar: hecha / borrar (como en 360) */
+    .cn-ev.deslizando { position: relative; z-index: 1; transition: none; }
+    .cn-ev.volviendo { transition: transform 0.2s ease; }
     .item.deslizando { position: relative; z-index: 1; transition: none; }
     .item.volviendo { transition: transform 0.2s ease; }
-    .item-fondo { position: absolute; z-index: 0; background: #dc3545; color: #fff; border-radius: 14px; display: flex; align-items: center; justify-content: flex-start;
+    .item-fondo { position: absolute; z-index: 0; background: #dc3545; color: #fff; border-radius: 16px; display: flex; align-items: center; justify-content: flex-start;
         padding-left: 18px; box-sizing: border-box; font-weight: 900; font-size: 16px; pointer-events: none; }
     .item-fondo.listo { background: #b71c1c; }
     .item-fondo.hecho { background: #2e7d32; justify-content: flex-end; padding-left: 0; padding-right: 18px; }
@@ -159,7 +199,6 @@
 <nav>
     <button data-v="hoy" onclick="ir('hoy')"><span>🏠</span>Hoy</button>
     <button data-v="cal" onclick="ir('cal')"><span>📅</span>Calendario</button>
-    <button class="mas" onclick="nuevoSegunVista()"><span>🎤</span>Añadir</button>
     <button data-v="examenes" onclick="ir('examenes')"><span>📝</span>Exámenes</button>
     <button data-v="tareas" onclick="ir('tareas')"><span>⭐</span>Tareas</button>
     <button data-v="comidas" onclick="ir('comidas')"><span>🍽️</span>Comidas</button>
@@ -169,12 +208,12 @@
 <script>
 // ==========================================
 // AGENDA FAMILIA · v1 (25/11/2026) · v3 (26/11): PDF grandes del temario reducidos en el móvil
-// v6 (27/11): 🎤 Añadir entiende día, hora, quién y tipo, como «Dictar al calendario» de 360 · v5 (27/11): la tecla de añadir es 🎤 y arranca el micrófono · v4 (27/11): 📢 altavoz, 🎤 dictado de 360, deslizar ✓ hecha / 🗑️ borrar con Deshacer y papelera
+// v8 (27/11): «🎤 Dictar una nota» arriba de lado a lado y Hoy como la agenda por días de 360 · v7 (27/11): notas y tareas con la tarjeta de la agenda de 360 (sin círculo; 👈 hecha, 👉 borrar) · v6 (27/11): 🎤 Añadir entiende día, hora, quién y tipo, como «Dictar al calendario» de 360 · v5 (27/11): la tecla de añadir es 🎤 y arranca el micrófono · v4 (27/11): 📢 altavoz, 🎤 dictado de 360, deslizar ✓ hecha / 🗑️ borrar con Deshacer y papelera
 // Hecha a partir de las ideas de MOVILEC 360 (calendario, marcar hecho, dictar, aviso de versión),
 // pero separada del todo: su propia web y su propia hoja de Google (cuenta personal).
 // Los datos se guardan en el móvil y, si hay conexión configurada, se comparten con la hoja (Codigo.gs).
 // ==========================================
-const VERSION_APP = 6;
+const VERSION_APP = 8;
 const TIPOS = {
     deberes: ['📚', 'Deberes'], examen: ['📝', 'Examen'], actividad: ['⚽', 'Actividad'],
     medico: ['🩺', 'Médico'], cumple: ['🎂', 'Cumpleaños'], viaje: ['✈️', 'Viaje'], otro: ['📌', 'Otro']
@@ -343,31 +382,37 @@ function pintar() {
     document.getElementById('titulo').innerHTML = yo ? `Hola, ${esc(yo.nombre)} ${cara(yo, 30)}` : 'Agenda Familia';
     const fh = nombreDia(hoyIso()); document.getElementById('cab-fecha').textContent = fh.charAt(0).toUpperCase() + fh.slice(1);
     const v = document.getElementById('vista');
-    v.innerHTML = vista === 'hoy' ? vistaHoy() : vista === 'cal' ? vistaCalendario() : vista === 'tareas' ? vistaTareas() : vista === 'examenes' ? vistaExamenes() : vista === 'comidas' ? vistaComidas() : vistaAjustes();
+    v.innerHTML = (vista === 'hoy' ? tarjetasAnuncios() : '') + (vista === 'ajustes' ? '' : filaAnadir()) + (vista === 'hoy' ? vistaHoy() : vista === 'cal' ? vistaCalendario() : vista === 'tareas' ? vistaTareas() : vista === 'examenes' ? vistaExamenes() : vista === 'comidas' ? vistaComidas() : vistaAjustes());
 }
 function chipsFiltro() {
     return `<div class="chips"><button class="chip ${filtro ? '' : 'on'}" onclick="filtro='';pintar()">👪 Todos</button>` +
         D.miembros.map(m => `<button class="chip ${filtro === m.id ? 'on' : ''}" style="--c:${m.color}" onclick="filtro='${m.id}';pintar()">${cara(m)} ${esc(m.nombre)}</button>`).join('') + '</div>';
 }
+// Icono redondo con el texto de debajo (cnHtmlIcono de 360)
+function icoNota(icono, texto, col) { return `<div class="cn-ico" style="background:${col}22;border-color:${col}">${icono}</div><div class="cn-ico-et" style="color:${col}">${texto}</div>`; }
+const paraTexto = ms => ms.length === 0 ? 'Todos' : ms.length === 1 ? esc(ms[0].nombre) : esc(ms[0].nombre) + ' +' + (ms.length - 1);
+// Nota del calendario como en la agenda de 360 (cnHtmlEvento): 👈 hecha, 👉 borrar, tocar para abrir
 function itemEvento(e, fecha) {
     const ms = miembrosDe(e.quien), [em] = TIPOS[e.tipo] || TIPOS.otro, hecho = estaHecho(e, fecha);
-    const color = ms.length === 1 ? ms[0].color : '#94a3b8';
-    const quien = ms.length ? ms.map(m => cara(m) + ' ' + esc(m.nombre)).join(', ') : '👪 Todos';
+    const col = ms.length === 1 ? ms[0].color : '#5a6270';
     const anos = e.tipo === 'cumple' && e.repetir === 'anual' ? Number(fecha.slice(0, 4)) - Number(e.fecha.slice(0, 4)) : 0;
     const pr = e.esExamen ? progreso(D.examenes.find(x => x.id === e.id)) : null;
-    const por = hecho && quienHizo(e, fecha);
-    return `<div class="item ${hecho ? 'hecho' : ''} ${IMPORTANTES.includes(e.tipo) ? 'importante' : ''}" ${e.esExamen ? '' : `data-tabla="eventos" data-id="${e.id}" data-fecha="${fecha}"`} style="border-left-color:${color}" onclick="${e.esExamen ? 'abrirExamen' : 'editarEvento'}('${e.id}')">
-        <div class="ico">${em}</div>
-        <div class="txt"><div class="tit">${esc(e.titulo)}${anos > 0 ? ' · ' + anos + ' años' : ''}</div><div class="sub">${e.hora ? '🕒 ' + e.hora + ' · ' : ''}${quien}${e.repetir === 'semanal' ? ' · 🔁 cada semana' : ''}${pr && pr.total ? ' · 📖 ' + pr.hechos + '/' + pr.total : ''}${por ? ` · <span class="hecha-por">✓ ${esc(por.nombre)}</span>` : ''}</div></div>
-        ${e.esExamen ? '' : `<button class="check" onclick="event.stopPropagation();marcar('eventos','${e.id}','${fecha}')">${hecho ? '✓' : ''}</button>`}</div>`;
+    const por = hecho && !e.esExamen ? quienHizo(e, fecha) : null;
+    const hora = e.hora ? esc(e.hora) : '<small>Todo el día</small>';
+    const extra = [ms.length > 1 ? ms.map(m => esc(m.nombre)).join(', ') : '', e.repetir === 'semanal' ? '↻ cada semana' : e.repetir === 'anual' && e.tipo !== 'cumple' ? '↻ cada año' : '',
+        pr && pr.total ? '📖 ' + pr.hechos + ' de ' + pr.total + ' pasos' : '', e.notas ? '📝 notas' : ''].filter(Boolean).join(' · ');
+    return `<div class="cn-ev${hecho && !e.esExamen ? ' cn-hecho' : ''}${IMPORTANTES.includes(e.tipo) ? ' importante' : ''}" ${e.esExamen ? '' : `data-tabla="eventos" data-id="${e.id}" data-fecha="${fecha}"`} style="border-left-color:${col}" onclick="${e.esExamen ? 'abrirExamen' : 'editarEvento'}('${e.id}')">
+        <div class="cn-ev-hora">${hora}${icoNota(ms.length === 1 ? cara(ms[0], 26) : em, paraTexto(ms), col)}</div>
+        <div class="cn-ev-txt"><b>${em} ${esc(e.titulo)}${anos > 0 ? ' · ' + anos + ' años' : ''}</b>${hecho && !e.esExamen ? `<span class="cn-hecha">✓ Hecha${por ? ' · ' + esc(por.nombre) : ''}</span>` : ''}${extra ? `<em>${extra}</em>` : ''}</div></div>`;
 }
+// Tarea de casa con la misma tarjeta
 function itemTarea(t, fecha) {
     const m = miembro(t.quien), hecho = estaHecho(t, fecha), atrasada = (!t.repetir || t.repetir === 'una') && t.fecha < fecha && !hecho;
-    const por = hecho && quienHizo(t, fecha);
-    return `<div class="item ${hecho ? 'hecho' : ''}" data-tabla="tareas" data-id="${t.id}" data-fecha="${fecha}" style="border-left-color:${m ? m.color : '#94a3b8'}" onclick="editarTarea('${t.id}')">
-        <div class="ico">${m ? cara(m, 30) : '👪'}</div>
-        <div class="txt"><div class="tit">${esc(t.titulo)}</div><div class="sub">${m ? esc(m.nombre) : 'Cualquiera'} · ⭐ ${t.puntos || 0}${atrasada ? ' · ⏰ pendiente' : ''}${por ? ` · <span class="hecha-por">✓ ${por.id === t.quien ? 'hecha' : 'la hizo ' + esc(por.nombre)}</span>` : ''}</div></div>
-        <button class="check" onclick="event.stopPropagation();marcar('tareas','${t.id}','${fecha}')">${hecho ? '✓' : ''}</button></div>`;
+    const por = hecho ? quienHizo(t, fecha) : null, col = m ? m.color : '#5a6270';
+    const extra = [`⭐ ${t.puntos || 0} ${Number(t.puntos) === 1 ? 'punto' : 'puntos'}`, atrasada ? '⏰ pendiente de otro día' : ''].filter(Boolean).join(' · ');
+    return `<div class="cn-ev${hecho ? ' cn-hecho' : ''}" data-tabla="tareas" data-id="${t.id}" data-fecha="${fecha}" style="border-left-color:${col}" onclick="editarTarea('${t.id}')">
+        <div class="cn-ev-hora"><small>Tarea</small>${icoNota(m ? cara(m, 26) : '👪', m ? esc(m.nombre) : 'Cualquiera', col)}</div>
+        <div class="cn-ev-txt"><b>${esc(t.titulo)}</b>${hecho ? `<span class="cn-hecha">✓ Hecha${por ? ' · ' + esc(por.nombre) : ''}</span>` : ''}<em>${extra}</em></div></div>`;
 }
 function bloqueDia(fecha, titulo) {
     const ev = eventosDe(fecha), es = estudioDe(fecha);
@@ -392,19 +437,28 @@ function cuentaAtras() {
             <div class="t">${esc(i.t)}</div>${ms.length === 1 ? `<div class="q">${cara(ms[0])} ${esc(ms[0].nombre)}</div>` : ''}</div>`;
     }).join('') + `</div>`;
 }
+// 🏠 Hoy, como el Inicio de 360: avisos, el dictado arriba y la agenda por días empezando por hoy (cnHtmlLista).
+// Los días vacíos, en una línea fina que se toca para añadir; «Ver 14 días más» alarga la lista.
+let diasLista = 14;
 function vistaHoy() {
-    const hoy = hoyIso();
-    let h = tarjetasAnuncios() + chipsFiltro() + cuentaAtras() + menuHoy() + bloqueDia(hoy, 'Hoy') + bloqueDia(sumarDias(hoy, 1), 'Mañana · ' + nombreDia(sumarDias(hoy, 1)));
-    const ta = tareasDe(hoy), hechas = ta.filter(t => estaHecho(t, hoy)).length;
-    if (ta.length) h += `<h2>Tareas de casa · ${hechas} de ${ta.length}</h2>` + ta.map(t => itemTarea(t, hoy)).join('');
-    // Lo importante de los próximos 30 días (exámenes, cumpleaños, médico)
-    let prox = '';
-    for (let i = 2; i <= 30; i++) {
-        const f = sumarDias(hoy, i), ev = eventosDe(f).filter(e => IMPORTANTES.includes(e.tipo) || i <= 7);
-        if (ev.length) prox += `<h2 style="margin-top:12px;text-transform:none;letter-spacing:0">${nombreDia(f)}</h2>` + ev.map(e => itemEvento(e, f)).join('');
+    const hoy = hoyIso(), fin = sumarDias(hoy, diasLista - 1);
+    let h = chipsFiltro();   // los anuncios van encima del dictado (pintar), como el aviso en 360
+    for (let d = hoy, i = 0; d <= fin; d = sumarDias(d, 1), i++) {
+        const ev = eventosDe(d), es = estudioDe(d), ta = i === 0 ? tareasDe(hoy) : [];
+        const f = deIso(d), ds = DIAS[f.getDay()].slice(0, 3);
+        if (!ev.length && !es.length && !ta.length && i > 0) {
+            h += `<div class="cn-dia-vacio" onclick="editarEvento(null,'${d}')"><b>${ds} ${f.getDate()}</b><span>${i === 1 ? 'Mañana · ' : ''}nada previsto</span><i>＋</i></div>`;
+            continue;
+        }
+        const etiqueta = i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : MESES[f.getMonth()].slice(0, 3);
+        const hechas = ta.filter(t => estaHecho(t, hoy)).length;
+        const lista = ev.map(e => itemEvento(e, d)).join('') + es.map(x => itemPaso(x, d)).join('') +
+            (ta.length ? `<div class="cn-dia-sub">⭐ Tareas de casa · ${hechas} de ${ta.length}</div>` + ta.map(t => itemTarea(t, hoy)).join('') : '');
+        h += `<div class="cn-dia-fila${i === 0 ? ' hoy' : ''}"><div class="cn-dia-fecha"><small>${ds}</small><b>${f.getDate()}</b><em>${etiqueta}</em></div>` +
+            `<div class="cn-dia-eventos">${ev.length || es.length || ta.length ? lista + `<div class="cn-dia-mas" onclick="editarEvento(null,'${d}')">＋ añadir</div>` : `<div class="cn-dia-nada" onclick="editarEvento(null,'${d}')">Nada previsto · toca para añadir</div>`}</div></div>`;
     }
-    h += `<h2>Próximos días</h2>` + (prox || `<div class="vacio">Nada en la semana, ni exámenes ni cumpleaños en el mes</div>`);
-    return h + botonPapelera();
+    h += `<button class="cn-mas" onclick="diasLista += 14; pintar()">Ver 14 días más (ahora hasta el ${deIso(fin).getDate()} de ${MESES[deIso(fin).getMonth()]})</button>`;
+    return h + cuentaAtras() + menuHoy() + botonPapelera();
 }
 function vistaCalendario() {
     const a = mesVista.getFullYear(), m = mesVista.getMonth(), hoy = hoyIso();
@@ -469,11 +523,16 @@ function abrirModal(html) {
 }
 function cerrarModal() { document.getElementById('capa-modal').innerHTML = ''; pintar(); }
 // 🎤 Añadir: abre la ficha nueva de la pantalla en la que se está y el micrófono ya escuchando (como «Dictar una nota» de 360)
-function nuevoSegunVista() {
-    if (vista === 'hoy' || vista === 'cal' || vista === 'ajustes') { dictarNota(); return; }
+// Arriba de cada pantalla, como en 360: «🎤 Dictar…» de lado a lado y, al lado, «✏️ Escribir» para apuntar a mano
+function filaAnadir() {
+    const t = { tareas: '🎤 Dictar una tarea', examenes: '🎤 Dictar un examen', comidas: '🎤 Dictar un plato' }[vista] || '🎤 Dictar una nota';
+    return `<div class="cn-fila-anadir"><button class="cn-btn-dictar" onclick="nuevoSegunVista(true)">${t}</button><button class="cn-btn-escribir" onclick="nuevoSegunVista(false)">✏️ Escribir</button></div>`;
+}
+function nuevoSegunVista(dictando) {
+    if (vista === 'hoy' || vista === 'cal') { if (dictando) dictarNota(); else editarEvento(null, vista === 'cal' ? diaSel : hoyIso()); return; }
     if (vista === 'comidas') editarPlato(null); else if (vista === 'examenes') nuevoExamen(); else editarTarea(null);
     const campo = { comidas: 'pl-nombre', examenes: 'ex-asig', tareas: 'ta-titulo' }[vista];
-    if (document.getElementById(campo)) dictar(campo);
+    if (dictando && document.getElementById(campo)) dictar(campo);
 }
 function chipsQuien(sel, multiple) {
     return `<div class="chips" style="flex-wrap:wrap" id="quien">` + (multiple ? `<button type="button" class="chip ${sel.length ? '' : 'on'}" data-id="" onclick="elegirQuien(this,true)">👪 Todos</button>` : '') +
@@ -1259,7 +1318,7 @@ function puedeBorrarDeslizando(tabla, x) {
 let deslizar = null, deslizarAnularClic = false;
 const deslizarAbajo = e => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    const el = e.target.closest && e.target.closest('.item[data-tabla]');
+    const el = e.target.closest && e.target.closest('.cn-ev[data-tabla], .item[data-tabla]');
     if (!el || e.target.closest('.check')) return;
     const x = (D[el.dataset.tabla] || []).find(y => y.id === el.dataset.id);
     if (!x) return;
