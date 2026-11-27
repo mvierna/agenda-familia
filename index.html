@@ -125,6 +125,10 @@
     .dc-micro.escuchando { background: #dc3545; animation: dc-latido 1.2s infinite; }
     @keyframes dc-latido { 50% { transform: scale(1.08); } }
     .dc-estado { text-align: center; font-size: 15px; font-weight: bold; color: #444; margin: 4px 0 10px; min-height: 20px; }
+    .dc-ayuda { font-size: 15px; color: #555; line-height: 1.35; }
+    .dc-resumen { margin: 10px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+    .dc-resumen span { background: #fff; border: 1px solid #dee2e6; border-radius: 999px; padding: 6px 11px; font-size: 14px; font-weight: bold; color: #333; }
+    .dc-oido { background: #fff7ed; border-left: 4px solid #f57c00; border-radius: 10px; padding: 8px 10px; font-size: 14px; color: #444; margin-bottom: 6px; }
     .et-micro { display: flex; align-items: flex-end; justify-content: space-between; }
     .et-micro button { border: none; background: #fff3e0; color: #b85c00; border-radius: 10px; padding: 5px 10px; font-size: 14px; font-weight: 600; margin-bottom: 4px; }
     /* 👈👉 Deslizar: hecha / borrar (como en 360) */
@@ -165,12 +169,12 @@
 <script>
 // ==========================================
 // AGENDA FAMILIA · v1 (25/11/2026) · v3 (26/11): PDF grandes del temario reducidos en el móvil
-// v5 (27/11): la tecla de añadir es 🎤 y arranca el micrófono · v4 (27/11): 📢 altavoz, 🎤 dictado de 360, deslizar ✓ hecha / 🗑️ borrar con Deshacer y papelera
+// v6 (27/11): 🎤 Añadir entiende día, hora, quién y tipo, como «Dictar al calendario» de 360 · v5 (27/11): la tecla de añadir es 🎤 y arranca el micrófono · v4 (27/11): 📢 altavoz, 🎤 dictado de 360, deslizar ✓ hecha / 🗑️ borrar con Deshacer y papelera
 // Hecha a partir de las ideas de MOVILEC 360 (calendario, marcar hecho, dictar, aviso de versión),
 // pero separada del todo: su propia web y su propia hoja de Google (cuenta personal).
 // Los datos se guardan en el móvil y, si hay conexión configurada, se comparten con la hoja (Codigo.gs).
 // ==========================================
-const VERSION_APP = 5;
+const VERSION_APP = 6;
 const TIPOS = {
     deberes: ['📚', 'Deberes'], examen: ['📝', 'Examen'], actividad: ['⚽', 'Actividad'],
     medico: ['🩺', 'Médico'], cumple: ['🎂', 'Cumpleaños'], viaje: ['✈️', 'Viaje'], otro: ['📌', 'Otro']
@@ -466,8 +470,9 @@ function abrirModal(html) {
 function cerrarModal() { document.getElementById('capa-modal').innerHTML = ''; pintar(); }
 // 🎤 Añadir: abre la ficha nueva de la pantalla en la que se está y el micrófono ya escuchando (como «Dictar una nota» de 360)
 function nuevoSegunVista() {
-    if (vista === 'comidas') editarPlato(null); else if (vista === 'examenes') nuevoExamen(); else if (vista === 'tareas') editarTarea(null); else editarEvento(null, vista === 'cal' ? diaSel : hoyIso());
-    const campo = { comidas: 'pl-nombre', examenes: 'ex-asig', tareas: 'ta-titulo' }[vista] || 'ev-titulo';
+    if (vista === 'hoy' || vista === 'cal' || vista === 'ajustes') { dictarNota(); return; }
+    if (vista === 'comidas') editarPlato(null); else if (vista === 'examenes') nuevoExamen(); else editarTarea(null);
+    const campo = { comidas: 'pl-nombre', examenes: 'ex-asig', tareas: 'ta-titulo' }[vista];
     if (document.getElementById(campo)) dictar(campo);
 }
 function chipsQuien(sel, multiple) {
@@ -495,7 +500,7 @@ function editarEvento(id, fecha) {
         <div class="et-micro"><label class="et">Notas</label><button type="button" onclick="dictar('ev-notas')">🎤 Dictar</button></div><textarea id="ev-notas" placeholder="Temas, qué llevar, dirección…">${esc(e.notas)}</textarea>
         <div class="botones"><button class="btn pri" onclick="guardarEvento('${e.id}')">💾 Guardar</button><button class="btn" onclick="cerrarModal()">Cancelar</button></div>
         ${id ? `<div class="botones"><button class="btn" onclick="avisoEvento('${e.id}')">⏰ Avisarme</button><button class="btn peligro" onclick="borrarEvento('${e.id}')">🗑️ Borrar</button></div>` : ''}`);
-    if (!id) setTimeout(() => document.getElementById('ev-titulo')?.focus(), 200);
+    if (!id) setTimeout(() => { const c = document.getElementById('ev-titulo'); if (c && !dcAbierto() && !c.value) c.focus(); }, 200);   // con el 🎤 abierto, no: el teclado lo tapa
 }
 function elegirTipo(b) {
     document.querySelectorAll('#tipos .chip').forEach(x => x.classList.remove('on')); b.classList.add('on');
@@ -790,7 +795,7 @@ function nuevoExamen() {
         <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:15px"><input type="checkbox" id="ex-findes" style="width:auto"> Descansar sábados y domingos</label>
         <small class="ayuda">Con los temas se hace solo el plan de estudio día a día. Luego podrás añadir las fotos del temario.</small>
         <div class="botones"><button class="btn pri" onclick="crearExamen()">Crear y ver el plan ›</button><button class="btn" onclick="cerrarModal()">Cancelar</button></div>`);
-    setTimeout(() => document.getElementById('ex-asig')?.focus(), 200);
+    setTimeout(() => { if (!dcAbierto()) document.getElementById('ex-asig')?.focus(); }, 200);
 }
 function crearExamen() {
     const asignatura = val('ex-asig');
@@ -1363,25 +1368,237 @@ function limpiarPapelera() {
     D.papelera.filter(p => !p.f || p.f < limite || (D[p.tabla] || []).some(x => x.id === p.ref)).forEach(p => borrar('papelera', p.id));
 }
 
+// ---------- 🎤 DICTAR UNA NOTA (copiado de «Dictar al calendario» de 360) ----------
+// «El martes a las cinco, dentista de Pelayo» → día, hora, quién, tipo y título. Lo entendido abre la ficha ya
+// rellena: se revisa y se pulsa Guardar. Las fechas y horas se entienden igual que en 360.
+const DC_DIAS = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+const DC_MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const DC_NUMEROS = { una: 1, uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10, once: 11, doce: 12,
+    trece: 13, catorce: 14, quince: 15, dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19, veinte: 20, veintiuno: 21, veintidos: 22,
+    veintitres: 23, veinticuatro: 24, veinticinco: 25, veintiseis: 26, veintisiete: 27, veintiocho: 28, veintinueve: 29, treinta: 30, treintayuno: 31 };
+function dcSinAcentos(s) { return s.normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+const dcClave = s => dcSinAcentos(String(s).toLowerCase()).replace(/[^a-z0-9ñ ]/g, '').trim();
+// Cómo se puede nombrar a cada uno: su nombre y, si es el padre o la madre, «papá» o «mamá»
+function dcNombres() {
+    const r = [];
+    D.miembros.forEach(m => {
+        const k = dcClave(m.nombre); if (k) r.push([k, m.id]);
+        if (m.rol === 'padre') {
+            if (m.emoji === '👨' || /^(papa|padre)$/.test(k)) r.push(['papa', m.id], ['padre', m.id]);
+            if (m.emoji === '👩' || /^(mama|madre)$/.test(k)) r.push(['mama', m.id], ['madre', m.id]);
+        }
+    });
+    return r.sort((a, b) => b[0].length - a[0].length);
+}
+
+function entenderNota(texto, hoyISO) {
+    const o = String(texto || '').normalize('NFC');
+    // Se busca en minúsculas y sin acentos (mismas posiciones que el original); lo entendido se tapa con espacios
+    // y lo que queda sin tapar, con sus acentos y mayúsculas, es el título
+    let t = dcSinAcentos(o.toLowerCase());
+    const tapado = new Array(o.length).fill(false);
+    const quitar = re => {
+        const m = re.exec(t);
+        if (!m) return null;
+        for (let i = m.index; i < m.index + m[0].length; i++) tapado[i] = true;
+        t = t.slice(0, m.index) + ' '.repeat(m[0].length) + t.slice(m.index + m[0].length);
+        return m;
+    };
+    const hoy = hoyISO || hoyIso(), sumar = n => sumarDias(hoy, n);
+    const N = '(\\d{1,2}|' + Object.keys(DC_NUMEROS).sort((a, b) => b.length - a.length).join('|') + ')', num = s => /^\d+$/.test(s) ? Number(s) : DC_NUMEROS[s];
+    const MES = '(' + DC_MESES.join('|') + ')', DIA = '(lunes|martes|miercoles|jueves|viernes|sabado|domingo)';
+    const r = { fecha: hoy, hora: '', tipo: '', quien: [], repetir: '', titulo: '', notas: '', diaDicho: false };
+    let m, diaSemana = '';
+
+    // Lo que se dice para mandar ("añade", "apunta en la agenda"...)
+    quitar(/^\s*(oye,?\s+)?(por favor,?\s+)?(anade|anadir|anademe|apunta|apuntar|apuntame|pon|poner|ponme|agenda|agendar|crea|crear|anota|anotar|recuerdame|recordar|recuerda|mete|meter)\b(\s+(un|una|el|la)\s+(evento|cita|recordatorio|tarea|nota|aviso))?(\s+(en|a)\s+(el\s+|la\s+)?(calendario|agenda))?[,:]?/);
+
+    // Repetición: cada semana (o cada lunes...) y cada año
+    if ((m = quitar(new RegExp('\\b(todos los|cada)\\s+' + DIA + 's?\\b')))) { r.repetir = 'semanal'; diaSemana = m[2]; }
+    else if (quitar(/\b(todas las semanas|cada semana|semanalmente)\b/)) r.repetir = 'semanal';
+    else if (quitar(/\b(todos los anos|cada ano)\b/)) r.repetir = 'anual';
+
+    // Semanas o meses de distancia: "dentro de dos semanas", "la semana que viene", "el mes que viene"
+    const NU = '(un|' + N.slice(1), cuantos = s => s === 'un' ? 1 : num(s);
+    let semanas = 0, meses = 0;
+    if ((m = quitar(new RegExp('\\b(?:de\\s+|para\\s+)?(?:dentro de|en)\\s+' + NU + '\\s+semanas?\\b')))) semanas = cuantos(m[1]);
+    else if ((m = quitar(new RegExp('\\b(?:de\\s+|para\\s+)?(?:dentro de|en)\\s+' + NU + '\\s+mes(?:es)?\\b')))) meses = cuantos(m[1]);
+    else if (quitar(/\b(?:de\s+|para\s+)?(?:la\s+)?(?:semana que viene|proxima semana|semana proxima)\b/)) semanas = 1;
+    else if (quitar(/\b(?:del\s+|de\s+|para\s+)?(?:el\s+)?(?:mes que viene|proximo mes|mes proximo)\b/)) meses = 1;
+
+    // Hora: "a las 10 y media", "a la una", "a mediodía"; "por la tarde" suma 12. Sin decirlo, de 1 a 7 se entiende tarde.
+    // ("de 5 a 7": la agenda guarda una sola hora, la de empezar)
+    const T = '(' + N + '(?:\\s*(?::|\\.|h)\\s*\\d{2}|\\s+y\\s+(?:media|cuarto|\\d{1,2})|\\s+menos\\s+(?:cuarto|\\d{1,2})|\\s+en\\s+punto)?)';
+    const parte = quitar(/\b(por|de|a)\s+la\s+(manana|tarde|noche)\b/);
+    const aHora = s => {
+        const primero = (s.trim().match(/^(\d{1,2}|[a-z]+)/) || [])[1] || '';
+        let h = num(primero), min = 0;
+        if (h === undefined) return '';
+        const resto = s.trim().slice(primero.length);
+        if (parte && /tarde|noche/.test(parte[2]) && h < 12) h += 12;
+        else if (!parte && h >= 1 && h <= 7) h += 12;
+        let x;
+        if ((x = resto.match(/^\s*(?::|\.|h)\s*(\d{2})/))) min = Number(x[1]);
+        else if ((x = resto.match(/y\s+(media|cuarto|\d{1,2})/))) min = x[1] === 'media' ? 30 : x[1] === 'cuarto' ? 15 : Number(x[1]);
+        else if ((x = resto.match(/menos\s+(cuarto|\d{1,2})/))) { h -= 1; min = 60 - (x[1] === 'cuarto' ? 15 : Number(x[1])); }
+        if (h > 23 || min > 59) return '';
+        return dos(h) + ':' + dos(min);
+    };
+    if ((m = quitar(new RegExp('\\b(?:de|desde)\\s+(?:las?\\s+)?' + T + '\\s+(?:a|hasta)\\s+(?:las?\\s+)?' + T)))) r.hora = aHora(m[1]);
+    else if ((m = quitar(new RegExp('\\b(?:a|sobre|hacia|para)\\s+las?\\s+' + T)))) r.hora = aHora(m[1]);
+    else if (quitar(/\b(a|al)\s+medio\s?dia\b/)) r.hora = '12:00';
+    if (quitar(/\b(todo el dia|el dia entero)\b/)) r.hora = '';
+
+    // Día
+    const deMes = (d, mes) => { const a = Number(hoy.slice(0, 4)); let x = iso(new Date(a, mes, d)); if (x < hoy) x = iso(new Date(a + 1, mes, d)); return x; };
+    const delMes = d => { const f = deIso(hoy); let x = iso(new Date(f.getFullYear(), f.getMonth(), d)); if (x < hoy) x = iso(new Date(f.getFullYear(), f.getMonth() + 1, d)); return x; };
+    const proximo = (dia, incluirHoy) => { let n = (DC_DIAS.indexOf(dia) - deIso(hoy).getDay() + 7) % 7; if (n === 0 && !incluirHoy) n = 7; return sumar(n); };
+    let diaDicho = diaSemana, diaNum = 0, fijada = false;
+    const ORD = { primer: 1, primero: 1, segundo: 2, tercer: 3, tercero: 3, cuarto: 4, ultimo: -1 };
+    const enesimo = (dia, n, a, mes) => {
+        const d = DC_DIAS.indexOf(dia);
+        if (n > 0) { const pri = new Date(a, mes, 1); return new Date(a, mes, 1 + (d - pri.getDay() + 7) % 7 + 7 * (n - 1)); }
+        const ult = new Date(a, mes + 1, 0); return new Date(a, mes, ult.getDate() - (ult.getDay() - d + 7) % 7);
+    };
+    let relativo = null;
+    if (quitar(/\bpasado\s+manana\b/)) relativo = 2; else if (quitar(/\bmanana\b/)) relativo = 1; else if (quitar(/\bhoy\b/)) relativo = 0;
+    if (diaSemana) { r.fecha = proximo(diaSemana, true); r.diaDicho = true; }
+    else if (relativo !== null) { r.fecha = sumar(relativo); fijada = true; }
+    else if ((m = quitar(new RegExp('\\b(?:el\\s+)?(' + Object.keys(ORD).join('|') + ')\\s+' + DIA + '\\b(?:\\s+(?:de|del)\\s+(?:(?:este|el)\\s+)?(mes|' + DC_MESES.join('|') + ')\\b)?')))) {
+        const f = deIso(hoy), n = ORD[m[1]], nombreMes = m[3] && m[3] !== 'mes' ? DC_MESES.indexOf(m[3]) : -1;
+        const a = f.getFullYear(), mes = nombreMes >= 0 ? nombreMes : f.getMonth() + meses;
+        let x = enesimo(m[2], n, a, mes);
+        if (iso(x) < hoy) x = nombreMes >= 0 ? enesimo(m[2], n, a + 1, mes) : enesimo(m[2], n, a, mes + 1);
+        r.fecha = iso(x); fijada = true;
+    }
+    else if ((m = quitar(new RegExp('\\b(?:(?:a|para)\\s+)?(?:el\\s+)?(?:ultimo(?:\\s+dia)?|fin|final)' +
+            '(?:\\s+(?:de|del)\\s+(?:(?:este|el)\\s+)?(mes|' + DC_MESES.join('|') + '))' + (meses ? '?' : '') + '\\b')))) {
+        const f = deIso(hoy), nombreMes = m[1] && m[1] !== 'mes' ? DC_MESES.indexOf(m[1]) : -1;
+        const a = f.getFullYear(), mes = nombreMes >= 0 ? nombreMes : f.getMonth() + meses;
+        let x = new Date(a, mes + 1, 0);
+        if (iso(x) < hoy) x = new Date(a + 1, mes + 1, 0);
+        r.fecha = iso(x); fijada = true;
+    }
+    else if ((m = quitar(new RegExp('\\b(?:del|desde el)\\s+(?:dia\\s+)?' + N + '\\s+(?:al|hasta el)\\s+(?:dia\\s+)?' + N + '(?:\\s+de\\s+' + MES + ')?')))) {
+        const mes = m[3] ? DC_MESES.indexOf(m[3]) : null;
+        r.fecha = mes === null ? delMes(num(m[1])) : deMes(num(m[1]), mes); fijada = true;
+    }
+    else if ((m = quitar(new RegExp('\\b(?:el\\s+)?(?:dia\\s+)?' + N + '\\s+de\\s+' + MES + '\\b')))) { r.fecha = deMes(num(m[1]), DC_MESES.indexOf(m[2])); fijada = true; }
+    else if ((m = quitar(new RegExp('\\b(?:el\\s+)?(?:(proximo|este)\\s+)?' + DIA + '(\\s+que viene|\\s+proximo)?\\b')))) { r.fecha = proximo(m[2], m[1] === 'este'); diaDicho = m[2]; r.diaDicho = true; }
+    else if ((m = quitar(new RegExp('\\b(?:dentro de|en)\\s+' + N + '\\s+dias?\\b')))) { r.fecha = sumar(num(m[1])); fijada = true; }
+    else if ((m = quitar(new RegExp('\\bel\\s+(?:dia\\s+)?' + N + '\\b')))) { r.fecha = delMes(num(m[1])); diaNum = num(m[1]); r.diaDicho = true; }
+    if (fijada) r.diaDicho = true;
+    if (!fijada && semanas) {
+        const base = deIso(sumar(7 * semanas));
+        if (diaDicho) { const desdeLunes = (base.getDay() + 6) % 7, quiero = (DC_DIAS.indexOf(diaDicho) + 6) % 7; base.setDate(base.getDate() - desdeLunes + quiero); }
+        r.fecha = iso(base); r.diaDicho = true;
+    } else if (!fijada && meses) {
+        const f = deIso(hoy), a = f.getFullYear(), mes = f.getMonth() + meses, ultimo = new Date(a, mes + 1, 0).getDate();
+        r.fecha = iso(new Date(a, mes, Math.min(diaNum || f.getDate(), ultimo))); r.diaDicho = true;
+    }
+
+    // Quién: «para Pelayo y Carolina», «con mamá», «Pelayo tiene…» se quitan del título; si solo se nombra
+    // («llevar a Carolina al cumple de Pelayo»), se apunta igual pero se queda en el título
+    const nombres = dcNombres(), Y = '(?:\\s*,\\s*|\\s+(?:y|e)\\s+)(?:a\\s+|el\\s+|la\\s+)?';
+    const RE_N = '(' + nombres.map(n => n[0]).join('|') + ')';
+    if (quitar(/\b(?:para\s+)?(?:toda la familia|todos(?!\s+(?:los|las)\b)|todo el mundo)\b/)) r.todos = true;
+    if (quitar(/\b(?:para\s+)?(?:los ninos|los chicos|los crios|los hijos|los dos chicos|los dos ninos)\b/)) D.miembros.filter(x => x.rol === 'hijo').forEach(x => r.quien.push(x.id));
+    if (nombres.length) {
+        const idDe = k => (nombres.find(n => n[0] === k) || [])[1];
+        const grupo = (antes, despues) => new RegExp('\\b' + antes + RE_N + '((?:' + Y + RE_N + ')*)' + despues + '\\b');
+        const sacar = mm => { [mm[1]].concat((mm[2] || '').split(/\s*,\s*|\s+(?:y|e)\s+/).map(s => s.replace(/^(a|el|la)\s+/, '').trim())).filter(Boolean).forEach(k => { const id = idDe(k); if (id) r.quien.push(id); }); };
+        let mm;
+        while ((mm = quitar(grupo('(?:para|con|de parte de)\\s+(?:a\\s+|el\\s+|la\\s+)?', '')))) sacar(mm);
+        while ((mm = quitar(grupo('', '\\s+(?:tiene|tienen|tiene que|tienen que)')))) sacar(mm);
+        // Nombrados sin más: se apuntan, pero se quedan en el título
+        nombres.forEach(([k, id]) => { if (new RegExp('\\b' + k + '\\b').test(t)) r.quien.push(id); });
+    }
+    r.quien = [...new Set(r.quien)];
+    if (r.todos) r.quien = [];
+
+    // Tipo, por las palabras que se dicen (no se quitan del título)
+    const tl = t;
+    r.tipo = /\bcumple/.test(tl) ? 'cumple' : /\b(examen|control de|recuperacion de)\b/.test(tl) ? 'examen'
+        : /\b(medic[oa]|dentista|pediatra|doctor[a]?|hospital|vacuna|revision|oculista|oftalmolog|ortodonc|analisis|urgencias|fisio)/.test(tl) ? 'medico'
+        : /\b(viaje|vuelo|excursion|vacaciones|campamento|aeropuerto)\b/.test(tl) ? 'viaje'
+        : /\b(futbol|baloncesto|basket|entreno|entrenamiento|partido|natacion|piscina|musica|piano|guitarra|clase de|academia|baile|judo|karate|tenis|padel|gimnasia|extraescolar|conservatorio|catequesis)/.test(tl) ? 'actividad'
+        : /\b(deberes|trabajo de|ejercicios|leer el libro|estudiar|exposicion)\b/.test(tl) ? 'deberes' : 'otro';
+    if (r.tipo === 'cumple' && !r.repetir) r.repetir = 'anual';
+
+    // Título: lo que queda, sin los "que hay que", comas y conectores sueltos
+    let tit = o.split('').map((c, i) => tapado[i] ? ' ' : c).join('').replace(/\s+/g, ' ').trim();
+    let antes;
+    do {
+        antes = tit;
+        tit = tit.replace(/^[\s,.;:–-]+/, '').replace(/[\s,.;:–-]+$/, '')
+            .replace(/^(y|que|e|para|a|en|el|la)\s+/i, '')
+            .replace(/^(hay que|tenemos que|tengo que|tienes que|tiene que|tienen que|habrá que|habra que|toca|es para|tiene|tienen)\s+/i, '')
+            .replace(/\s+(y|de|para|en|a|el|la|con)$/i, '');
+    } while (tit !== antes);
+    tit = tit.charAt(0).toUpperCase() + tit.slice(1);
+    // Un mensaje largo no cabe en el título: el título es su comienzo y el mensaje entero va a las notas (como en 360)
+    if (tit.length > 60) {
+        const frase = tit.split(/(?<=[.!?])\s/)[0];
+        r.titulo = frase.length <= 60 ? frase.replace(/[.!?]$/, '') : tit.slice(0, 60).replace(/\s+\S*$/, '') + '…';
+        r.notas = o.trim();
+    } else r.titulo = tit;
+    return r;
+}
+function dcPintarResumen() {
+    const caja = document.getElementById('dc-resumen'), txt = (document.getElementById('dc-texto')?.value || '').trim();
+    if (!caja) return;
+    if (!txt) { caja.innerHTML = ''; return; }
+    const r = entenderNota(txt), [em, tn] = TIPOS[r.tipo] || TIPOS.otro;
+    const ds = nombreDia(r.fecha);
+    caja.innerHTML = [`📅 ${ds.charAt(0).toUpperCase() + ds.slice(1)}`, r.hora ? `🕒 ${r.hora}` : '🕒 Sin hora',
+        r.quien.length ? '👤 ' + r.quien.map(id => miembro(id)?.nombre).join(', ') : '👪 Todos', `${em} ${tn}`,
+        r.repetir ? (r.repetir === 'semanal' ? '🔁 Cada semana' : '🔁 Cada año') : '', r.titulo ? `📝 ${r.titulo}` : '📝 (falta qué)']
+        .filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('');
+}
+// El 🎤 Añadir de Hoy y Calendario: se habla y se abre la ficha con lo entendido
+function dictarNota() {
+    dictar(null, {
+        titulo: '🎤 Dictar una nota',
+        ayuda: 'Di qué, cuándo y para quién. Por ejemplo:<br><i>«El martes a las cinco, dentista de Pelayo»</i>',
+        resumen: true,
+        seguir: txt => {
+            if (!txt) return;
+            // Sin decir el día, en el Calendario va al día que se está mirando
+            const r = entenderNota(txt);
+            if (!r.diaDicho && vista === 'cal') r.fecha = diaSel;
+            editarEvento(null, r.fecha);
+            const pon = (id, v) => { const c = document.getElementById(id); if (c) c.value = v || ''; };
+            pon('ev-titulo', r.titulo); pon('ev-hora', r.hora); pon('ev-repetir', r.repetir); if (r.notas) pon('ev-notas', r.notas);
+            const chip = document.querySelector(`#tipos .chip[data-t="${r.tipo}"]`); if (chip) elegirTipo(chip);
+            document.querySelectorAll('#quien .chip').forEach(c => c.classList.toggle('on', c.dataset.id ? r.quien.includes(c.dataset.id) : !r.quien.length));
+            const h3 = document.querySelector('.modal h3');
+            if (h3) h3.insertAdjacentHTML('afterend', `<div class="dc-oido">🎤 «${esc(txt)}»<br><b>Revisa lo que he entendido y pulsa Guardar.</b></div>`);
+        }
+    });
+}
+
 // ---------- 🎤 DICTAR: el mismo micrófono que el «Dictar al calendario» de 360 ----------
 // Ventana con el micrófono grande. Escucha seguido (continuous) y, si el móvil corta al pararse a pensar, vuelve a
 // abrirse solo; deja de escuchar tras 8 s callado (12 s si aún no se ha dicho nada). «Seguir» pasa el texto a la casilla.
 // En iPhone el dictado de la web falla en la app instalada: se usa el 🎤 del teclado.
 const DICTADO_SILENCIO_MS = 8000, DICTADO_ESPERA_MS = 12000;
-let dcRec = null, dcCampo = '', dcUltimaVoz = 0, dcSilencio = null;
+let dcRec = null, dcCampo = '', dcOp = {}, dcUltimaVoz = 0, dcSilencio = null;
 const dcAbierto = () => !!document.getElementById('capa-dictado');
-function dictar(idCampo) {
-    dcCampo = idCampo;
-    const c = document.getElementById(idCampo), largo = c && c.tagName === 'TEXTAREA';
+function dictar(idCampo, op) {
+    dcCampo = idCampo; dcOp = op || {};
+    const c = idCampo ? document.getElementById(idCampo) : null, largo = !c || c.tagName === 'TEXTAREA';
     const capa = document.createElement('div');
     capa.id = 'capa-dictado'; capa.className = 'fondo-modal'; capa.style.zIndex = 80;
     capa.onclick = ev => { if (ev.target === capa) cerrarDictado(); };
-    capa.innerHTML = `<div class="modal"><div style="display:flex;align-items:center"><h3 style="flex:1;margin:0">🎤 Dictar</h3><button class="btn" style="flex:none;padding:8px 14px" onclick="cerrarDictado()">✕</button></div>
+    capa.innerHTML = `<div class="modal"><div style="display:flex;align-items:center"><h3 style="flex:1;margin:0">${dcOp.titulo || '🎤 Dictar'}</h3><button class="btn" style="flex:none;padding:8px 14px" onclick="cerrarDictado()">✕</button></div>
+        ${dcOp.ayuda ? `<div class="dc-ayuda">${dcOp.ayuda}</div>` : ''}
         <button id="dc-micro" class="dc-micro" onclick="alternarDictado()" ${esIOS() ? 'style="display:none"' : ''}>🎤</button>
         <div id="dc-estado" class="dc-estado"></div>
-        <textarea id="dc-texto" rows="${largo ? 5 : 3}" placeholder="Lo que digas sale aquí (también se puede escribir)">${esc(c ? c.value : '')}</textarea>
+        <textarea id="dc-texto" rows="${largo ? 5 : 3}" placeholder="Lo que digas sale aquí (también se puede escribir)" oninput="dcPintarResumen()">${esc(c ? c.value : '')}</textarea>
+        ${dcOp.resumen ? '<div id="dc-resumen" class="dc-resumen"></div>' : ''}
         <div class="botones"><button class="btn pri" onclick="dictadoACampo()">Seguir ›</button></div></div>`;
     document.body.appendChild(capa);
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();   // que el teclado no tape el micrófono
     if ((window.SpeechRecognition || window.webkitSpeechRecognition) && !esIOS()) empezarDictado();
     else dictarConTeclado();
 }
@@ -1424,6 +1641,7 @@ function empezarDictado(sigue) {
         if (frase.trim()) { nuevo = true; dcUltimaVoz = Date.now(); }
         const todo = inicio + frase.trim();
         caja.value = todo.charAt(0).toUpperCase() + todo.slice(1);
+        dcPintarResumen();
     };
     rec.onerror = ev => {
         if (ev.error === 'no-speech' || ev.error === 'aborted') return;
@@ -1450,8 +1668,11 @@ function empezarDictado(sigue) {
     try { rec.start(); } catch (e) { dcRec = null; boton.classList.remove('escuchando'); est.textContent = 'No se pudo abrir el micrófono.'; }
 }
 function dictadoACampo() {
-    const txt = document.getElementById('dc-texto').value.trim(), c = document.getElementById(dcCampo);
+    const txt = document.getElementById('dc-texto').value.trim(), op = dcOp;
+    if (op.seguir && !txt) { document.getElementById('dc-estado').textContent = 'Di o escribe primero qué hay que apuntar.'; return; }
     cerrarDictado();
+    if (op.seguir) { op.seguir(txt); return; }
+    const c = document.getElementById(dcCampo);
     if (c) { c.value = txt; c.dispatchEvent(new Event('input')); }
 }
 
