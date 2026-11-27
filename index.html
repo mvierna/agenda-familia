@@ -80,7 +80,7 @@
     .btn { flex: 1; border: none; border-radius: 12px; padding: 13px; font-size: 16px; font-weight: 600; background: #e5e7eb; color: var(--texto); }
     .btn.pri { background: var(--azul); color: #fff; }
     .btn.peligro { background: #fee2e2; color: #b91c1c; }
-    .aviso { position: fixed; left: 50%; bottom: calc(var(--nav) + env(safe-area-inset-bottom) + 20px); transform: translateX(-50%); background: #111827; color: #fff; padding: 10px 16px; border-radius: 12px; z-index: 60; font-size: 15px; max-width: 90%; text-align: center; }
+    .aviso { position: fixed; left: 50%; bottom: calc(var(--nav) + env(safe-area-inset-bottom) + 96px); transform: translateX(-50%); background: #111827; color: #fff; padding: 10px 16px; border-radius: 12px; z-index: 60; font-size: 15px; max-width: 90%; text-align: center; }
     .miembro { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #eee; }
     .miembro:last-child { border-bottom: none; }
     .bola { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex: none; }
@@ -131,6 +131,43 @@
     .dc-oido { background: #fff7ed; border-left: 4px solid #f57c00; border-radius: 10px; padding: 8px 10px; font-size: 14px; color: #444; margin-bottom: 6px; }
     .et-micro { display: flex; align-items: flex-end; justify-content: space-between; }
     .et-micro button { border: none; background: #fff3e0; color: #b85c00; border-radius: 10px; padding: 5px 10px; font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    /* ===== v9: pantalla de inicio compacta, como las agendas de móvil de ahora (Google Calendar, TickTick, Todoist) ===== */
+    /* Fila de una línea: hora · barra de color · título (cortado) y debajo un detalle corto · cara de quien es. Lo demás, al abrirla */
+    .nota { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 14px; padding: 9px 10px 9px 8px; margin-bottom: 6px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.06); min-height: 54px; }
+    .nota[data-tabla] { touch-action: pan-y; }
+    .nota .f-hora { flex: none; width: 44px; text-align: center; font-size: 14px; font-weight: 800; color: #374151; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .nota .f-hora small { display: block; font-size: 11px; font-weight: 700; color: #9ca3af; }
+    .nota .f-barra { flex: none; width: 4px; align-self: stretch; border-radius: 4px; background: #94a3b8; }
+    .nota .f-txt { flex: 1; min-width: 0; }
+    .nota .f-tit { font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .nota .f-sub { font-size: 13px; color: var(--gris); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+    .nota .f-av { flex: none; position: relative; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; background: #f3f4f6; border: 2px solid var(--c, #cbd5e1); overflow: hidden; }
+    .nota .f-av img.cara { width: 100% !important; height: 100% !important; }
+    .nota .f-av.varios { font-size: 12px; font-weight: 800; color: #374151; }
+    .nota.importante { background: #fff7ed; }
+    .nota.hecha { background: #f3f4f6; box-shadow: none; }
+    .nota.hecha .f-tit { text-decoration: line-through; color: #9ca3af; font-weight: 600; }
+    .nota.hecha .f-av { opacity: .55; }
+    .nota .f-ok { color: #16a34a; font-weight: 800; }
+    .nota.deslizando { position: relative; z-index: 1; transition: none; }
+    .nota.volviendo { transition: transform 0.2s ease; }
+    /* Días: cabecera fina con la fecha (en vez de la columna ancha) */
+    .dia-cab { display: flex; align-items: baseline; gap: 8px; margin: 16px 4px 7px; color: var(--gris); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; }
+    .dia-cab.hoy { color: var(--azul); }
+    .dia-cab b { font-size: 15px; color: var(--texto); letter-spacing: 0; text-transform: none; }
+    .dia-cab.hoy b { color: var(--azul); }
+    .dia-cab .mas { margin-left: auto; border: none; background: none; color: var(--azul); font-weight: 800; font-size: 20px; padding: 0 6px; }
+    .dias-vacios { display: flex; align-items: center; gap: 8px; margin: 10px 0; padding: 10px 12px; border-radius: 12px; border: 1.5px dashed #d1d5db; color: #9ca3af; font-size: 14px; cursor: pointer; }
+    .dias-vacios b { color: #6b7280; }
+    .dias-vacios i { margin-left: auto; font-style: normal; color: var(--azul); font-weight: 900; font-size: 18px; }
+    /* 🎤 Botón flotante abajo a la derecha (al alcance del pulgar, para diestros) y ✏️ pequeño encima */
+    .fab { position: fixed; right: 16px; bottom: calc(var(--nav) + env(safe-area-inset-bottom) + 18px); z-index: 20; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+    .fab button { border: none; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 900; }
+    .fab .fab-dictar { height: 62px; padding: 0 22px 0 18px; border-radius: 22px; background: #f57c00; color: #fff; font-size: 18px; box-shadow: 0 8px 20px rgba(245,124,0,.45); }
+    .fab .fab-dictar span { font-size: 26px; }
+    .fab .fab-escribir { width: 48px; height: 48px; border-radius: 16px; background: #fff; color: var(--azul); font-size: 20px; box-shadow: 0 4px 12px rgba(0,0,0,.18); }
+    .fab button:active { transform: scale(.95); }
+    body { padding-bottom: calc(var(--nav) + env(safe-area-inset-bottom) + 100px); }
     /* 🎤 Fila de arriba de 360: «Dictar una nota» de lado a lado */
     .cn-fila-anadir { display: flex; gap: 8px; margin: 2px 0 10px; }
     .cn-btn-dictar { flex: 1; border: none; background: #f57c00; color: #fff; border-radius: 18px; padding: 14px 8px; font-size: 18px; font-weight: 900; box-shadow: 0 6px 16px rgba(239, 122, 26, 0.35); }
@@ -203,17 +240,18 @@
     <button data-v="tareas" onclick="ir('tareas')"><span>⭐</span>Tareas</button>
     <button data-v="comidas" onclick="ir('comidas')"><span>🍽️</span>Comidas</button>
 </nav>
+<div class="fab" id="fab"><button class="fab-escribir" onclick="nuevoSegunVista(false)" title="Escribir">✏️</button><button class="fab-dictar" id="fab-dictar" onclick="nuevoSegunVista(true)"><span>🎤</span>Dictar</button></div>
 <div id="capa-modal"></div>
 
 <script>
 // ==========================================
 // AGENDA FAMILIA · v1 (25/11/2026) · v3 (26/11): PDF grandes del temario reducidos en el móvil
-// v8 (27/11): «🎤 Dictar una nota» arriba de lado a lado y Hoy como la agenda por días de 360 · v7 (27/11): notas y tareas con la tarjeta de la agenda de 360 (sin círculo; 👈 hecha, 👉 borrar) · v6 (27/11): 🎤 Añadir entiende día, hora, quién y tipo, como «Dictar al calendario» de 360 · v5 (27/11): la tecla de añadir es 🎤 y arranca el micrófono · v4 (27/11): 📢 altavoz, 🎤 dictado de 360, deslizar ✓ hecha / 🗑️ borrar con Deshacer y papelera
+// v9 (27/11): inicio compacto (filas de una línea, estudio agrupado) y botón flotante 🎤 Dictar abajo a la derecha · v8 (27/11): «🎤 Dictar una nota» arriba de lado a lado y Hoy como la agenda por días de 360 · v7 (27/11): notas y tareas con la tarjeta de la agenda de 360 (sin círculo; 👈 hecha, 👉 borrar) · v6 (27/11): 🎤 Añadir entiende día, hora, quién y tipo, como «Dictar al calendario» de 360 · v5 (27/11): la tecla de añadir es 🎤 y arranca el micrófono · v4 (27/11): 📢 altavoz, 🎤 dictado de 360, deslizar ✓ hecha / 🗑️ borrar con Deshacer y papelera
 // Hecha a partir de las ideas de MOVILEC 360 (calendario, marcar hecho, dictar, aviso de versión),
 // pero separada del todo: su propia web y su propia hoja de Google (cuenta personal).
 // Los datos se guardan en el móvil y, si hay conexión configurada, se comparten con la hoja (Codigo.gs).
 // ==========================================
-const VERSION_APP = 8;
+const VERSION_APP = 9;
 const TIPOS = {
     deberes: ['📚', 'Deberes'], examen: ['📝', 'Examen'], actividad: ['⚽', 'Actividad'],
     medico: ['🩺', 'Médico'], cumple: ['🎂', 'Cumpleaños'], viaje: ['✈️', 'Viaje'], otro: ['📌', 'Otro']
@@ -382,7 +420,8 @@ function pintar() {
     document.getElementById('titulo').innerHTML = yo ? `Hola, ${esc(yo.nombre)} ${cara(yo, 30)}` : 'Agenda Familia';
     const fh = nombreDia(hoyIso()); document.getElementById('cab-fecha').textContent = fh.charAt(0).toUpperCase() + fh.slice(1);
     const v = document.getElementById('vista');
-    v.innerHTML = (vista === 'hoy' ? tarjetasAnuncios() : '') + (vista === 'ajustes' ? '' : filaAnadir()) + (vista === 'hoy' ? vistaHoy() : vista === 'cal' ? vistaCalendario() : vista === 'tareas' ? vistaTareas() : vista === 'examenes' ? vistaExamenes() : vista === 'comidas' ? vistaComidas() : vistaAjustes());
+    document.getElementById('fab').style.display = vista === 'ajustes' ? 'none' : '';
+    v.innerHTML = (vista === 'hoy' ? tarjetasAnuncios() : '') + (vista === 'hoy' ? vistaHoy() : vista === 'cal' ? vistaCalendario() : vista === 'tareas' ? vistaTareas() : vista === 'examenes' ? vistaExamenes() : vista === 'comidas' ? vistaComidas() : vistaAjustes());
 }
 function chipsFiltro() {
     return `<div class="chips"><button class="chip ${filtro ? '' : 'on'}" onclick="filtro='';pintar()">👪 Todos</button>` +
@@ -391,32 +430,47 @@ function chipsFiltro() {
 // Icono redondo con el texto de debajo (cnHtmlIcono de 360)
 function icoNota(icono, texto, col) { return `<div class="cn-ico" style="background:${col}22;border-color:${col}">${icono}</div><div class="cn-ico-et" style="color:${col}">${texto}</div>`; }
 const paraTexto = ms => ms.length === 0 ? 'Todos' : ms.length === 1 ? esc(ms[0].nombre) : esc(ms[0].nombre) + ' +' + (ms.length - 1);
-// Nota del calendario como en la agenda de 360 (cnHtmlEvento): 👈 hecha, 👉 borrar, tocar para abrir
-function itemEvento(e, fecha) {
-    const ms = miembrosDe(e.quien), [em] = TIPOS[e.tipo] || TIPOS.otro, hecho = estaHecho(e, fecha);
-    const col = ms.length === 1 ? ms[0].color : '#5a6270';
-    const anos = e.tipo === 'cumple' && e.repetir === 'anual' ? Number(fecha.slice(0, 4)) - Number(e.fecha.slice(0, 4)) : 0;
-    const pr = e.esExamen ? progreso(D.examenes.find(x => x.id === e.id)) : null;
-    const por = hecho && !e.esExamen ? quienHizo(e, fecha) : null;
-    const hora = e.hora ? esc(e.hora) : '<small>Todo el día</small>';
-    const extra = [ms.length > 1 ? ms.map(m => esc(m.nombre)).join(', ') : '', e.repetir === 'semanal' ? '↻ cada semana' : e.repetir === 'anual' && e.tipo !== 'cumple' ? '↻ cada año' : '',
-        pr && pr.total ? '📖 ' + pr.hechos + ' de ' + pr.total + ' pasos' : '', e.notas ? '📝 notas' : ''].filter(Boolean).join(' · ');
-    return `<div class="cn-ev${hecho && !e.esExamen ? ' cn-hecho' : ''}${IMPORTANTES.includes(e.tipo) ? ' importante' : ''}" ${e.esExamen ? '' : `data-tabla="eventos" data-id="${e.id}" data-fecha="${fecha}"`} style="border-left-color:${col}" onclick="${e.esExamen ? 'abrirExamen' : 'editarEvento'}('${e.id}')">
-        <div class="cn-ev-hora">${hora}${icoNota(ms.length === 1 ? cara(ms[0], 26) : em, paraTexto(ms), col)}</div>
-        <div class="cn-ev-txt"><b>${em} ${esc(e.titulo)}${anos > 0 ? ' · ' + anos + ' años' : ''}</b>${hecho && !e.esExamen ? `<span class="cn-hecha">✓ Hecha${por ? ' · ' + esc(por.nombre) : ''}</span>` : ''}${extra ? `<em>${extra}</em>` : ''}</div></div>`;
+// v9: filas de una línea (como Google Calendar o TickTick). 👈 hecha, 👉 borrar, tocar para abrir y ver todo
+function avatar(ms) {
+    if (!ms.length) return `<div class="f-av">👪</div>`;
+    if (ms.length > 1) return `<div class="f-av varios">${ms.length}</div>`;
+    return `<div class="f-av" style="--c:${ms[0].color}">${cara(ms[0], 32)}</div>`;
 }
-// Tarea de casa con la misma tarjeta
+function itemEvento(e, fecha) {
+    const ms = miembrosDe(e.quien), [em] = TIPOS[e.tipo] || TIPOS.otro, hecho = !e.esExamen && estaHecho(e, fecha);
+    const col = ms.length === 1 ? ms[0].color : '#94a3b8';
+    const anos = e.tipo === 'cumple' && e.repetir === 'anual' ? Number(fecha.slice(0, 4)) - Number(e.fecha.slice(0, 4)) : 0;
+    const por = hecho ? quienHizo(e, fecha) : null;
+    const sub = [hecho ? `<span class="f-ok">✓ Hecha${por ? ' · ' + esc(por.nombre) : ''}</span>` : '', ms.length ? ms.map(m => esc(m.nombre)).join(', ') : 'Todos',
+        e.repetir === 'semanal' ? '↻ semanal' : '', e.notas ? '📝' : ''].filter(Boolean).join(' · ');
+    return `<div class="nota${hecho ? ' hecha' : ''}${IMPORTANTES.includes(e.tipo) && !hecho ? ' importante' : ''}" ${e.esExamen ? '' : `data-tabla="eventos" data-id="${e.id}" data-fecha="${fecha}"`} onclick="${e.esExamen ? 'abrirExamen' : 'editarEvento'}('${e.id}')">
+        <div class="f-hora">${e.hora ? esc(e.hora) : '<small>todo<br>el día</small>'}</div><div class="f-barra" style="background:${col}"></div>
+        <div class="f-txt"><div class="f-tit">${em} ${esc(e.titulo)}${anos > 0 ? ' · ' + anos + ' años' : ''}</div><div class="f-sub">${sub}</div></div>${avatar(ms)}</div>`;
+}
 function itemTarea(t, fecha) {
     const m = miembro(t.quien), hecho = estaHecho(t, fecha), atrasada = (!t.repetir || t.repetir === 'una') && t.fecha < fecha && !hecho;
-    const por = hecho ? quienHizo(t, fecha) : null, col = m ? m.color : '#5a6270';
-    const extra = [`⭐ ${t.puntos || 0} ${Number(t.puntos) === 1 ? 'punto' : 'puntos'}`, atrasada ? '⏰ pendiente de otro día' : ''].filter(Boolean).join(' · ');
-    return `<div class="cn-ev${hecho ? ' cn-hecho' : ''}" data-tabla="tareas" data-id="${t.id}" data-fecha="${fecha}" style="border-left-color:${col}" onclick="editarTarea('${t.id}')">
-        <div class="cn-ev-hora"><small>Tarea</small>${icoNota(m ? cara(m, 26) : '👪', m ? esc(m.nombre) : 'Cualquiera', col)}</div>
-        <div class="cn-ev-txt"><b>${esc(t.titulo)}</b>${hecho ? `<span class="cn-hecha">✓ Hecha${por ? ' · ' + esc(por.nombre) : ''}</span>` : ''}<em>${extra}</em></div></div>`;
+    const por = hecho ? quienHizo(t, fecha) : null;
+    const sub = [hecho ? `<span class="f-ok">✓ Hecha${por ? ' · ' + esc(por.nombre) : ''}</span>` : '', `⭐ ${t.puntos || 0}`, m ? esc(m.nombre) : 'Cualquiera', atrasada ? '⏰ de otro día' : ''].filter(Boolean).join(' · ');
+    return `<div class="nota${hecho ? ' hecha' : ''}" data-tabla="tareas" data-id="${t.id}" data-fecha="${fecha}" onclick="editarTarea('${t.id}')">
+        <div class="f-hora"><small>tarea</small></div><div class="f-barra" style="background:${m ? m.color : '#94a3b8'}"></div>
+        <div class="f-txt"><div class="f-tit">${esc(t.titulo)}</div><div class="f-sub">${sub}</div></div>${avatar(m ? [m] : [])}</div>`;
+}
+// El estudio de un examen, en UNA fila por examen y día («📖 Estudiar Matemáticas · 0 de 2»); los pasos, al abrirlo
+function itemsEstudio(es, fecha) {
+    const grupos = [];
+    es.forEach(s => { let g = grupos.find(x => x.x.id === s.x.id); if (!g) grupos.push(g = { x: s.x, pasos: [] }); g.pasos.push(s); });
+    return grupos.map(({ x, pasos }) => {
+        const m = miembro(x.quien), hechos = pasos.filter(p => p.hecho).length, todo = hechos === pasos.length, atrasado = pasos.some(p => p.p.f < fecha && !p.hecho);
+        const primero = (pasos.find(p => !p.hecho) || pasos[0]).p.t.split(/[:(]/)[0].trim();
+        const sub = [todo ? '<span class="f-ok">✓ Hecho</span>' : `${hechos} de ${pasos.length}`, esc(primero), atrasado ? '⏰ atrasado' : ''].filter(Boolean).join(' · ');
+        return `<div class="nota${todo ? ' hecha' : ''}" onclick="abrirExamen('${x.id}')">
+            <div class="f-hora"><small>estudio</small></div><div class="f-barra" style="background:${m ? m.color : '#94a3b8'}"></div>
+            <div class="f-txt"><div class="f-tit">📖 Estudiar ${esc(x.asignatura)}</div><div class="f-sub">${sub}</div></div>${avatar(m ? [m] : [])}</div>`;
+    }).join('');
 }
 function bloqueDia(fecha, titulo) {
     const ev = eventosDe(fecha), es = estudioDe(fecha);
-    return `<h2>${titulo}</h2>` + (ev.length || es.length ? ev.map(e => itemEvento(e, fecha)).join('') + es.map(s => itemPaso(s, fecha)).join('') : `<div class="vacio">Nada apuntado</div>`);
+    return `<h2>${titulo}</h2>` + (ev.length || es.length ? ev.map(e => itemEvento(e, fecha)).join('') + itemsEstudio(es, fecha) : `<div class="vacio">Nada apuntado</div>`);
 }
 // ⏳ Cuenta atrás: los eventos marcados con «cuenta atrás» y todos los exámenes que vienen
 function proximaVez(e, hoy) {
@@ -441,23 +495,28 @@ function cuentaAtras() {
 // Los días vacíos, en una línea fina que se toca para añadir; «Ver 14 días más» alarga la lista.
 let diasLista = 14;
 function vistaHoy() {
-    const hoy = hoyIso(), fin = sumarDias(hoy, diasLista - 1);
-    let h = chipsFiltro();   // los anuncios van encima del dictado (pintar), como el aviso en 360
+    const hoy = hoyIso(), fin = sumarDias(hoy, diasLista - 1), corto = f => DIAS[f.getDay()].slice(0, 3) + ' ' + f.getDate();
+    let h = chipsFiltro(), vacios = [];
+    // Los días seguidos sin nada, en una sola línea («sáb 28 – jue 3 · nada previsto»); se toca para apuntar en el primero
+    const soltarVacios = () => {
+        if (!vacios.length) return;
+        const a = deIso(vacios[0]), b = deIso(vacios[vacios.length - 1]);
+        h += `<div class="dias-vacios" onclick="editarEvento(null,'${vacios[0]}')"><b>${corto(a)}${vacios.length > 1 ? ' – ' + corto(b) : ''}</b> nada previsto<i>＋</i></div>`;
+        vacios = [];
+    };
     for (let d = hoy, i = 0; d <= fin; d = sumarDias(d, 1), i++) {
         const ev = eventosDe(d), es = estudioDe(d), ta = i === 0 ? tareasDe(hoy) : [];
-        const f = deIso(d), ds = DIAS[f.getDay()].slice(0, 3);
-        if (!ev.length && !es.length && !ta.length && i > 0) {
-            h += `<div class="cn-dia-vacio" onclick="editarEvento(null,'${d}')"><b>${ds} ${f.getDate()}</b><span>${i === 1 ? 'Mañana · ' : ''}nada previsto</span><i>＋</i></div>`;
-            continue;
-        }
-        const etiqueta = i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : MESES[f.getMonth()].slice(0, 3);
+        if (!ev.length && !es.length && !ta.length && i > 0) { vacios.push(d); continue; }
+        soltarVacios();
+        const f = deIso(d), quien = i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : DIAS[f.getDay()];
         const hechas = ta.filter(t => estaHecho(t, hoy)).length;
-        const lista = ev.map(e => itemEvento(e, d)).join('') + es.map(x => itemPaso(x, d)).join('') +
-            (ta.length ? `<div class="cn-dia-sub">⭐ Tareas de casa · ${hechas} de ${ta.length}</div>` + ta.map(t => itemTarea(t, hoy)).join('') : '');
-        h += `<div class="cn-dia-fila${i === 0 ? ' hoy' : ''}"><div class="cn-dia-fecha"><small>${ds}</small><b>${f.getDate()}</b><em>${etiqueta}</em></div>` +
-            `<div class="cn-dia-eventos">${ev.length || es.length || ta.length ? lista + `<div class="cn-dia-mas" onclick="editarEvento(null,'${d}')">＋ añadir</div>` : `<div class="cn-dia-nada" onclick="editarEvento(null,'${d}')">Nada previsto · toca para añadir</div>`}</div></div>`;
+        h += `<div class="dia-cab${i === 0 ? ' hoy' : ''}"><b>${quien}</b> ${i < 2 ? DIAS[f.getDay()] + ' ' : ''}${f.getDate()} ${MESES[f.getMonth()].slice(0, 3)}<button class="mas" onclick="editarEvento(null,'${d}')">＋</button></div>`;
+        h += ev.map(e => itemEvento(e, d)).join('') + itemsEstudio(es, d);
+        if (ta.length) h += `<div class="dia-cab" style="margin-top:10px">⭐ Tareas de casa · ${hechas} de ${ta.length}</div>` + ta.map(t => itemTarea(t, hoy)).join('');
+        if (i === 0 && !ev.length && !es.length && !ta.length) h += `<div class="dias-vacios" onclick="editarEvento(null,'${d}')">Nada previsto para hoy<i>＋</i></div>`;
     }
-    h += `<button class="cn-mas" onclick="diasLista += 14; pintar()">Ver 14 días más (ahora hasta el ${deIso(fin).getDate()} de ${MESES[deIso(fin).getMonth()]})</button>`;
+    soltarVacios();
+    h += `<button class="cn-mas" onclick="diasLista += 14; pintar()">Ver 14 días más</button>`;
     return h + cuentaAtras() + menuHoy() + botonPapelera();
 }
 function vistaCalendario() {
@@ -1318,7 +1377,7 @@ function puedeBorrarDeslizando(tabla, x) {
 let deslizar = null, deslizarAnularClic = false;
 const deslizarAbajo = e => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    const el = e.target.closest && e.target.closest('.cn-ev[data-tabla], .item[data-tabla]');
+    const el = e.target.closest && e.target.closest('.nota[data-tabla], .cn-ev[data-tabla], .item[data-tabla]');
     if (!el || e.target.closest('.check')) return;
     const x = (D[el.dataset.tabla] || []).find(y => y.id === el.dataset.id);
     if (!x) return;
