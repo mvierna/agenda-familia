@@ -83,7 +83,7 @@
     .bola { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex: none; }
     .pie { text-align: center; color: var(--gris); font-size: 12px; margin: 20px 0; }
     small.ayuda { color: var(--gris); display: block; margin-top: 6px; line-height: 1.4; }
-    #btn-ajustes, #btn-buscar { background: rgba(255,255,255,.18); border: none; color: #fff; width: 38px; height: 38px; border-radius: 12px; font-size: 18px; }
+    #btn-ajustes, #btn-buscar, #btn-altavoz { background: rgba(255,255,255,.18); border: none; color: #fff; width: 38px; height: 38px; border-radius: 12px; font-size: 18px; }
     /* Exámenes */
     .barra { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-top: 8px; }
     .barra i { display: block; height: 100%; background: #22c55e; }
@@ -116,11 +116,36 @@
     .cta .q { font-size: 12px; color: var(--gris); }
     details.tarjeta summary { cursor: pointer; font-size: 16px; }
     details.tarjeta p { line-height: 1.5; white-space: pre-wrap; }
+    /* 🎤 Dictar (igual que en 360) */
+    .dc-micro { display: block; margin: 12px auto 6px; width: 112px; height: 112px; border-radius: 50%; border: none; background: #f57c00; color: #fff; font-size: 54px; box-shadow: 0 6px 0 #b85c00; }
+    .dc-micro:active { transform: translateY(5px); box-shadow: 0 1px 0 #b85c00; }
+    .dc-micro.escuchando { background: #dc3545; animation: dc-latido 1.2s infinite; }
+    @keyframes dc-latido { 50% { transform: scale(1.08); } }
+    .dc-estado { text-align: center; font-size: 15px; font-weight: bold; color: #444; margin: 4px 0 10px; min-height: 20px; }
+    .et-micro { display: flex; align-items: flex-end; justify-content: space-between; }
+    .et-micro button { border: none; background: #fff3e0; color: #b85c00; border-radius: 10px; padding: 5px 10px; font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    /* 👈👉 Deslizar: hecha / borrar (como en 360) */
+    .item.deslizando { position: relative; z-index: 1; transition: none; }
+    .item.volviendo { transition: transform 0.2s ease; }
+    .item-fondo { position: absolute; z-index: 0; background: #dc3545; color: #fff; border-radius: 14px; display: flex; align-items: center; justify-content: flex-start;
+        padding-left: 18px; box-sizing: border-box; font-weight: 900; font-size: 16px; pointer-events: none; }
+    .item-fondo.listo { background: #b71c1c; }
+    .item-fondo.hecho { background: #2e7d32; justify-content: flex-end; padding-left: 0; padding-right: 18px; }
+    .item-fondo.hecho.listo { background: #1b5e20; }
+    .item .hecha-por { color: #2e7d32; font-weight: 700; }
+    .btn-deshacer { flex: none; border: none; background: #ffc107; color: #000; border-radius: 8px; padding: 6px 12px; font-weight: 900; font-size: 14px; margin-left: 6px; }
+    /* 📢 Altavoz */
+    .anuncio { display: flex; gap: 12px; align-items: flex-start; background: #f5f3ff; border-left: 6px solid #7c3aed; border-radius: 14px; padding: 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .anuncio.rec { background: #fff7ed; border-left-color: #f57c00; }
+    .anuncio .ico { font-size: 24px; }
+    .anuncio .tx { flex: 1; min-width: 0; white-space: pre-wrap; line-height: 1.4; }
+    .anuncio .sub { font-size: 13px; color: var(--gris); margin-top: 4px; }
+    .grande-aviso { font-size: 19px; line-height: 1.45; white-space: pre-wrap; margin: 6px 0 4px; }
 </style>
 </head>
 <body>
 <header>
-    <div class="fila"><h1 id="titulo">Agenda Familia</h1><span id="estado" onclick="sincronizar(true)"></span><button id="btn-buscar" onclick="abrirBuscar()">🔎</button><button id="btn-ajustes" onclick="ir('ajustes')">⚙️</button></div>
+    <div class="fila"><h1 id="titulo">Agenda Familia</h1><span id="estado" onclick="sincronizar(true)"></span><button id="btn-altavoz" onclick="abrirAltavoz()" title="Altavoz: anuncios y recordatorios" style="display:none">📢</button><button id="btn-buscar" onclick="abrirBuscar()">🔎</button><button id="btn-ajustes" onclick="ir('ajustes')">⚙️</button></div>
     <div class="fecha" id="cab-fecha"></div>
 </header>
 <main id="vista"></main>
@@ -137,11 +162,12 @@
 <script>
 // ==========================================
 // AGENDA FAMILIA · v1 (25/11/2026) · v3 (26/11): PDF grandes del temario reducidos en el móvil
+// v4 (27/11): 📢 altavoz, 🎤 dictado de 360, deslizar ✓ hecha / 🗑️ borrar con Deshacer y papelera
 // Hecha a partir de las ideas de MOVILEC 360 (calendario, marcar hecho, dictar, aviso de versión),
 // pero separada del todo: su propia web y su propia hoja de Google (cuenta personal).
 // Los datos se guardan en el móvil y, si hay conexión configurada, se comparten con la hoja (Codigo.gs).
 // ==========================================
-const VERSION_APP = 3;
+const VERSION_APP = 4;
 const TIPOS = {
     deberes: ['📚', 'Deberes'], examen: ['📝', 'Examen'], actividad: ['⚽', 'Actividad'],
     medico: ['🩺', 'Médico'], cumple: ['🎂', 'Cumpleaños'], viaje: ['✈️', 'Viaje'], otro: ['📌', 'Otro']
@@ -167,8 +193,10 @@ if (!D) {
     ], eventos: [], tareas: [], examenes: [] };
     guardarLS('af_datos', D);
 }
-D.examenes = D.examenes || []; D.comidas = D.comidas || []; D.compra = D.compra || [];
-const TABLAS_APP = ['miembros', 'eventos', 'tareas', 'examenes', 'comidas', 'compra'];
+D.examenes = D.examenes || []; D.comidas = D.comidas || []; D.compra = D.compra || []; D.anuncios = D.anuncios || []; D.papelera = D.papelera || [];
+const TABLAS_APP = ['miembros', 'eventos', 'tareas', 'examenes', 'comidas', 'compra', 'anuncios', 'papelera'];
+// Pestañas que llegaron con la v4: si el script de la hoja aún es el viejo, lo suyo se queda esperando en el móvil
+const TABLAS_V4 = ['anuncios', 'papelera'];
 
 // ---------- Fechas ----------
 const dos = n => String(n).padStart(2, '0');
@@ -185,7 +213,14 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const miembro = id => D.miembros.find(m => m.id === id);
 const miembrosDe = quien => String(quien || '').split(',').filter(Boolean).map(miembro).filter(Boolean);
 const lista = s => String(s || '').split(',').filter(Boolean);
-const estaHecho = (x, fecha) => x.repetir && x.repetir !== 'una' && x.repetir !== '' ? lista(x.hecho).includes(fecha) : lista(x.hecho).length > 0;
+// «hecho» guarda las fechas en que se hizo y, desde la v4, quién: «2026-11-27=id» (las de antes, solo la fecha)
+const fechasHecho = x => lista(x.hecho).map(h => h.slice(0, 10));
+const estaHecho = (x, fecha) => x.repetir && x.repetir !== 'una' && x.repetir !== '' ? fechasHecho(x).includes(fecha) : lista(x.hecho).length > 0;
+function quienHizo(x, fecha) {
+    const rep = x.repetir && x.repetir !== 'una';
+    const h = lista(x.hecho).find(v => !rep || v.slice(0, 10) === fecha);
+    return h && h.length > 11 ? miembro(h.slice(11)) : null;
+}
 
 // Eventos de un día (con los que se repiten cada semana o cada año)
 function eventosDe(fecha) {
@@ -206,7 +241,7 @@ function tareasDe(fecha) {
         if (fecha < t.fecha && t.repetir !== 'una') return false;
         if (t.repetir === 'diaria') return true;
         if (t.repetir === 'semanal') return deIso(t.fecha).getDay() === d.getDay();
-        const hechaEl = lista(t.hecho)[0];
+        const hechaEl = fechasHecho(t)[0];
         if (hechaEl) return hechaEl === fecha;
         return t.fecha === fecha || (fecha === hoy && t.fecha < hoy);
     }).filter(pasaFiltro);
@@ -214,7 +249,7 @@ function tareasDe(fecha) {
 function puntosSemana(idMiembro) {
     const ini = lunesDe(hoyIso()), fin = sumarDias(ini, 6);
     return D.tareas.filter(t => t.quien === idMiembro)
-        .reduce((s, t) => s + lista(t.hecho).filter(f => f >= ini && f <= fin).length * (Number(t.puntos) || 0), 0);
+        .reduce((s, t) => s + fechasHecho(t).filter(f => f >= ini && f <= fin).length * (Number(t.puntos) || 0), 0);
 }
 let filtro = '';
 const pasaFiltro = x => !filtro || !x.quien || lista(x.quien).includes(filtro);
@@ -229,20 +264,30 @@ function guardar(tabla, fila) {
     sincronizar();
 }
 function borrar(tabla, id) {
+    // Las notas, tareas y exámenes borrados van a la papelera (se pueden recuperar 30 días). Devuelve su id, para Deshacer
+    const fila = D[tabla].find(x => x.id === id);
+    let pid = '';
+    if (fila && PAPELERA_DE.includes(tabla)) {
+        pid = nuevoId();
+        guardar('papelera', { id: pid, tabla, ref: id, titulo: tituloDe(tabla, fila), fila: JSON.stringify(fila), quien: cfg.yo || '', f: new Date().toISOString() });
+    }
     D[tabla] = D[tabla].filter(x => x.id !== id);
     pend.push({ op: 'borrar', tabla, id });
     guardarLS('af_datos', D); guardarLS('af_pendientes', pend);
     sincronizar();
+    return pid;
 }
 function marcar(tabla, id, fecha) {
     const x = D[tabla].find(y => y.id === id);
     if (!x) return;
     const h = lista(x.hecho), unaVez = !x.repetir || x.repetir === 'una';
-    const ya = unaVez ? h.length > 0 : h.includes(fecha);
-    const nuevo = unaVez ? (ya ? [] : [fecha]) : (ya ? h.filter(f => f !== fecha) : h.concat(fecha));
+    const ya = unaVez ? h.length > 0 : h.some(f => f.slice(0, 10) === fecha);
+    const marca = fecha + (cfg.yo ? '=' + cfg.yo : '');   // queda quién la hizo
+    const nuevo = unaVez ? (ya ? [] : [marca]) : (ya ? h.filter(f => f.slice(0, 10) !== fecha) : h.concat(marca));
     // Para no acumular para siempre: solo se guardan las fechas de los últimos 60 días
     const limite = sumarDias(hoyIso(), -60);
-    guardar(tabla, Object.assign({}, x, { hecho: nuevo.filter(f => f >= limite).join(',') }));
+    guardar(tabla, Object.assign({}, x, { hecho: nuevo.filter(f => f.slice(0, 10) >= limite).join(',') }));
+    if (ya) avisar('↩️ Pendiente: ' + x.titulo); else if (tabla !== 'tareas' || !Number(x.puntos)) avisar('✓ Hecha: ' + x.titulo);
     if (!ya && tabla === 'tareas' && Number(x.puntos)) avisar(`⭐ +${x.puntos} ${Number(x.puntos) === 1 ? 'punto' : 'puntos'} para ${miembro(x.quien)?.nombre || ''}`);
     pintar();
 }
@@ -258,9 +303,10 @@ async function sincronizar(manual) {
         const r = await fetch(cfg.url, { method: 'POST', body: JSON.stringify({ clave: cfg.clave, ops: enviando }) });
         const j = await r.json();
         if (!j.ok) throw new Error(j.error || 'error');
-        pend = pend.slice(enviando.length); guardarLS('af_pendientes', pend);
+        const viejo = !Array.isArray(j.anuncios);
+        pend = (viejo ? enviando.filter(o => TABLAS_V4.includes(o.tabla)) : []).concat(pend.slice(enviando.length)); guardarLS('af_pendientes', pend);
         // Lo que aún no se ha subido se vuelve a aplicar encima de lo que llega
-        TABLAS_APP.forEach(t => { D[t] = j[t] || []; });
+        TABLAS_APP.forEach(t => { if (!(viejo && TABLAS_V4.includes(t))) D[t] = j[t] || []; });
         pend.forEach(o => {
             const i = D[o.tabla].findIndex(x => x.id === (o.fila ? o.fila.id : o.id));
             if (o.op === 'borrar') { if (i >= 0) D[o.tabla].splice(i, 1); }
@@ -269,7 +315,7 @@ async function sincronizar(manual) {
         });
         guardarLS('af_datos', D);
         estado('✓ Al día'); setTimeout(() => estado(''), 2500);
-        if (!document.querySelector('.fondo-modal')) pintar();
+        if (!document.querySelector('.fondo-modal')) { pintar(); mirarAnuncios(); }
     } catch (e) {
         estado(navigator.onLine ? '⚠️ Sin conectar' : '📴 Sin conexión');
         if (manual) avisar(String(e.message).includes('CLAVE') ? '🔑 La clave no es la de la hoja' : '⚠️ No se pudo conectar: ' + e.message);
@@ -285,6 +331,7 @@ let vista = 'hoy', mesVista = new Date(), diaSel = hoyIso();
 function ir(v) { vista = v; window.scrollTo(0, 0); pintar(); }
 function pintar() {
     document.querySelectorAll('nav [data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === vista));
+    document.getElementById('btn-altavoz').style.display = esAdulto() ? '' : 'none';
     const yo = miembro(cfg.yo);
     document.getElementById('titulo').innerHTML = yo ? `Hola, ${esc(yo.nombre)} ${cara(yo, 30)}` : 'Agenda Familia';
     const fh = nombreDia(hoyIso()); document.getElementById('cab-fecha').textContent = fh.charAt(0).toUpperCase() + fh.slice(1);
@@ -301,16 +348,18 @@ function itemEvento(e, fecha) {
     const quien = ms.length ? ms.map(m => cara(m) + ' ' + esc(m.nombre)).join(', ') : '👪 Todos';
     const anos = e.tipo === 'cumple' && e.repetir === 'anual' ? Number(fecha.slice(0, 4)) - Number(e.fecha.slice(0, 4)) : 0;
     const pr = e.esExamen ? progreso(D.examenes.find(x => x.id === e.id)) : null;
-    return `<div class="item ${hecho ? 'hecho' : ''} ${IMPORTANTES.includes(e.tipo) ? 'importante' : ''}" style="border-left-color:${color}" onclick="${e.esExamen ? 'abrirExamen' : 'editarEvento'}('${e.id}')">
+    const por = hecho && quienHizo(e, fecha);
+    return `<div class="item ${hecho ? 'hecho' : ''} ${IMPORTANTES.includes(e.tipo) ? 'importante' : ''}" ${e.esExamen ? '' : `data-tabla="eventos" data-id="${e.id}" data-fecha="${fecha}"`} style="border-left-color:${color}" onclick="${e.esExamen ? 'abrirExamen' : 'editarEvento'}('${e.id}')">
         <div class="ico">${em}</div>
-        <div class="txt"><div class="tit">${esc(e.titulo)}${anos > 0 ? ' · ' + anos + ' años' : ''}</div><div class="sub">${e.hora ? '🕒 ' + e.hora + ' · ' : ''}${quien}${e.repetir === 'semanal' ? ' · 🔁 cada semana' : ''}${pr && pr.total ? ' · 📖 ' + pr.hechos + '/' + pr.total : ''}</div></div>
+        <div class="txt"><div class="tit">${esc(e.titulo)}${anos > 0 ? ' · ' + anos + ' años' : ''}</div><div class="sub">${e.hora ? '🕒 ' + e.hora + ' · ' : ''}${quien}${e.repetir === 'semanal' ? ' · 🔁 cada semana' : ''}${pr && pr.total ? ' · 📖 ' + pr.hechos + '/' + pr.total : ''}${por ? ` · <span class="hecha-por">✓ ${esc(por.nombre)}</span>` : ''}</div></div>
         ${e.esExamen ? '' : `<button class="check" onclick="event.stopPropagation();marcar('eventos','${e.id}','${fecha}')">${hecho ? '✓' : ''}</button>`}</div>`;
 }
 function itemTarea(t, fecha) {
     const m = miembro(t.quien), hecho = estaHecho(t, fecha), atrasada = (!t.repetir || t.repetir === 'una') && t.fecha < fecha && !hecho;
-    return `<div class="item ${hecho ? 'hecho' : ''}" style="border-left-color:${m ? m.color : '#94a3b8'}" onclick="editarTarea('${t.id}')">
+    const por = hecho && quienHizo(t, fecha);
+    return `<div class="item ${hecho ? 'hecho' : ''}" data-tabla="tareas" data-id="${t.id}" data-fecha="${fecha}" style="border-left-color:${m ? m.color : '#94a3b8'}" onclick="editarTarea('${t.id}')">
         <div class="ico">${m ? cara(m, 30) : '👪'}</div>
-        <div class="txt"><div class="tit">${esc(t.titulo)}</div><div class="sub">${m ? esc(m.nombre) : 'Cualquiera'} · ⭐ ${t.puntos || 0}${atrasada ? ' · ⏰ pendiente' : ''}</div></div>
+        <div class="txt"><div class="tit">${esc(t.titulo)}</div><div class="sub">${m ? esc(m.nombre) : 'Cualquiera'} · ⭐ ${t.puntos || 0}${atrasada ? ' · ⏰ pendiente' : ''}${por ? ` · <span class="hecha-por">✓ ${por.id === t.quien ? 'hecha' : 'la hizo ' + esc(por.nombre)}</span>` : ''}</div></div>
         <button class="check" onclick="event.stopPropagation();marcar('tareas','${t.id}','${fecha}')">${hecho ? '✓' : ''}</button></div>`;
 }
 function bloqueDia(fecha, titulo) {
@@ -338,7 +387,7 @@ function cuentaAtras() {
 }
 function vistaHoy() {
     const hoy = hoyIso();
-    let h = chipsFiltro() + cuentaAtras() + menuHoy() + bloqueDia(hoy, 'Hoy') + bloqueDia(sumarDias(hoy, 1), 'Mañana · ' + nombreDia(sumarDias(hoy, 1)));
+    let h = tarjetasAnuncios() + chipsFiltro() + cuentaAtras() + menuHoy() + bloqueDia(hoy, 'Hoy') + bloqueDia(sumarDias(hoy, 1), 'Mañana · ' + nombreDia(sumarDias(hoy, 1)));
     const ta = tareasDe(hoy), hechas = ta.filter(t => estaHecho(t, hoy)).length;
     if (ta.length) h += `<h2>Tareas de casa · ${hechas} de ${ta.length}</h2>` + ta.map(t => itemTarea(t, hoy)).join('');
     // Lo importante de los próximos 30 días (exámenes, cumpleaños, médico)
@@ -348,7 +397,7 @@ function vistaHoy() {
         if (ev.length) prox += `<h2 style="margin-top:12px;text-transform:none;letter-spacing:0">${nombreDia(f)}</h2>` + ev.map(e => itemEvento(e, f)).join('');
     }
     h += `<h2>Próximos días</h2>` + (prox || `<div class="vacio">Nada en la semana, ni exámenes ni cumpleaños en el mes</div>`);
-    return h;
+    return h + botonPapelera();
 }
 function vistaCalendario() {
     const a = mesVista.getFullYear(), m = mesVista.getMonth(), hoy = hoyIso();
@@ -376,9 +425,9 @@ function vistaTareas() {
     const todas = D.tareas.filter(pasaFiltro);
     if (todas.length) h += `<h2>Todas las tareas</h2>` + todas.map(t => {
         const m = miembro(t.quien), rep = { diaria: 'cada día', semanal: 'cada ' + DIAS[deIso(t.fecha).getDay()] }[t.repetir] || 'una vez, ' + nombreDia(t.fecha);
-        return `<div class="item" style="border-left-color:${m ? m.color : '#94a3b8'}" onclick="editarTarea('${t.id}')"><div class="ico">${m ? cara(m, 30) : '👪'}</div><div class="txt"><div class="tit">${esc(t.titulo)}</div><div class="sub">⭐ ${t.puntos || 0} · ${rep}</div></div></div>`;
+        return `<div class="item" data-tabla="tareas" data-id="${t.id}" data-fecha="${hoy}" style="border-left-color:${m ? m.color : '#94a3b8'}" onclick="editarTarea('${t.id}')"><div class="ico">${m ? cara(m, 30) : '👪'}</div><div class="txt"><div class="tit">${esc(t.titulo)}</div><div class="sub">⭐ ${t.puntos || 0} · ${rep}</div></div></div>`;
     }).join('');
-    return h;
+    return h + botonPapelera();
 }
 function vistaAjustes() {
     return `<h2>¿Quién usa este móvil?</h2><div class="tarjeta"><div class="chips" style="flex-wrap:wrap">` +
@@ -435,7 +484,7 @@ function editarEvento(id, fecha) {
         <label class="et">¿Para quién?</label>${chipsQuien(lista(e.quien), true)}
         <label class="et">¿Se repite?</label><select id="ev-repetir"><option value="">No</option><option value="semanal" ${e.repetir === 'semanal' ? 'selected' : ''}>Cada semana (mismo día)</option><option value="anual" ${e.repetir === 'anual' ? 'selected' : ''}>Cada año (cumpleaños)</option></select>
         <label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:15px"><input type="checkbox" id="ev-cuenta" style="width:auto" ${e.cuenta === '1' ? 'checked' : ''}> ⏳ Cuenta atrás en la pantalla de inicio</label>
-        <label class="et">Notas</label><textarea id="ev-notas" placeholder="Temas, qué llevar, dirección…">${esc(e.notas)}</textarea>
+        <div class="et-micro"><label class="et">Notas</label><button type="button" onclick="dictar('ev-notas')">🎤 Dictar</button></div><textarea id="ev-notas" placeholder="Temas, qué llevar, dirección…">${esc(e.notas)}</textarea>
         <div class="botones"><button class="btn pri" onclick="guardarEvento('${e.id}')">💾 Guardar</button><button class="btn" onclick="cerrarModal()">Cancelar</button></div>
         ${id ? `<div class="botones"><button class="btn" onclick="avisoEvento('${e.id}')">⏰ Avisarme</button><button class="btn peligro" onclick="borrarEvento('${e.id}')">🗑️ Borrar</button></div>` : ''}`);
     if (!id) setTimeout(() => document.getElementById('ev-titulo')?.focus(), 200);
@@ -461,7 +510,7 @@ function guardarEvento(id) {
 function borrarEvento(id) {
     const e = D.eventos.find(x => x.id === id);
     if (!confirm(`¿Borrar «${e.titulo}»?${e.repetir ? '\n\nSe borra en todas las fechas en que se repite.' : ''}`)) return;
-    borrar('eventos', id); cerrarModal(); avisar('🗑️ Borrado');
+    const pid = borrar('eventos', id); cerrarModal(); avisarDeshacer('🗑️ Borrado: ' + e.titulo, pid);
 }
 // ---------- ⏰ AVISOS (copiados de 360): la app no puede sonar si está cerrada, así que el aviso se pasa al móvil ----------
 // Reloj (Android): abre la app Reloj con la alarma puesta. Calendario: Google Calendar en Android,
@@ -497,7 +546,7 @@ function abrirAviso(a) {
         <div class="dos"><div><label class="et">Día</label><input type="date" id="al-fecha" value="${a.fecha}"></div><div><label class="et">Hora</label><input type="time" id="al-hora" value="${a.hora || '09:00'}"></div></div>
         <label class="et">Que suene</label><select id="al-antes">${[[0, 'A esa hora justa'], [10, '10 minutos antes'], [30, '30 minutos antes'], [60, '1 hora antes'], [1440, '1 día antes']]
             .map(([v, t]) => `<option value="${v}" ${(a.antes || 0) === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
-        ${a.hasta ? `<label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:15px"><input type="checkbox" id="al-diario" checked style="width:auto"> Cada día hasta el ${nombreDia(a.hasta)}</label>` : ''}
+        ${a.hasta || a.cadaDia ? `<label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:15px"><input type="checkbox" id="al-diario" checked style="width:auto"> Cada día${a.hasta ? ' hasta el ' + nombreDia(a.hasta) : ''}</label>` : ''}
         <div class="botones">${esIOS() ? '' : `<button class="btn" onclick="alarmaReloj()">⏰ Alarma en el Reloj</button>`}<button class="btn pri" onclick="alarmaCalendario()">📅 Al calendario del móvil</button></div>
         <small class="ayuda" id="al-estado">${a.hora ? '' : 'Elige a qué hora quieres el aviso.'}</small>
         <div class="botones"><button class="btn" onclick="document.getElementById('capa-aviso').remove()">Cerrar</button></div></div>`;
@@ -508,13 +557,13 @@ function alarmaDatos() {
     if (!f || !h) { est.textContent = 'Pon el día y la hora.'; return null; }
     const inicio = new Date(f + 'T' + h), antes = +document.getElementById('al-antes').value, diario = !!document.getElementById('al-diario')?.checked;
     return { titulo: avisoActual.titulo, notas: avisoActual.notas || '', inicio, antes, suena: new Date(inicio.getTime() - antes * 60000), est,
-        hasta: diario ? avisoActual.hasta : '' };
+        hasta: diario ? avisoActual.hasta : '', diario };
 }
 function alarmaReloj() {
     const a = alarmaDatos(); if (!a) return;
     const falta = a.suena - Date.now();
     if (falta < 0) { a.est.textContent = '⚠️ Esa hora ya ha pasado.'; return; }
-    if (falta > 24 * 3600000 && !a.hasta) { a.est.textContent = '⚠️ El Reloj solo pone alarmas para las próximas 24 horas (no sabe de días). Para más adelante usa «Al calendario del móvil».'; return; }
+    if (falta > 24 * 3600000 && !a.diario) { a.est.textContent = '⚠️ El Reloj solo pone alarmas para las próximas 24 horas (no sabe de días). Para más adelante usa «Al calendario del móvil».'; return; }
     const msj = encodeURIComponent(('⏰ ' + a.titulo).slice(0, 60));
     location.href = `intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.alarm.HOUR=${a.suena.getHours()};` +
         `i.android.intent.extra.alarm.MINUTES=${a.suena.getMinutes()};S.android.intent.extra.alarm.MESSAGE=${msj};B.android.intent.extra.alarm.SKIP_UI=false;end`;
@@ -522,13 +571,13 @@ function alarmaReloj() {
     let fuera = false; const marca = () => { fuera = true; };
     document.addEventListener('visibilitychange', marca, { once: true }); window.addEventListener('blur', marca, { once: true });
     a.est.textContent = '⏳ Abriendo el Reloj...';
-    setTimeout(() => { a.est.textContent = fuera ? (a.hasta ? '✅ En el Reloj, marca los días de la semana para que se repita, y bórrala después del examen.' : '✅ Comprueba en el Reloj que la alarma ha quedado puesta.') :
+    setTimeout(() => { a.est.textContent = fuera ? (a.diario ? '✅ En el Reloj, marca todos los días de la semana para que se repita' + (a.hasta ? ', y bórrala cuando acabe.' : '.') : '✅ Comprueba en el Reloj que la alarma ha quedado puesta.') :
         '❌ Este móvil no deja abrir el Reloj desde la app. Usa «Al calendario del móvil».'; }, 2500);
 }
 function alarmaCalendario() {
     const a = alarmaDatos(); if (!a) return;
     const sello = d => d.getFullYear() + dos(d.getMonth() + 1) + dos(d.getDate()) + 'T' + dos(d.getHours()) + dos(d.getMinutes()) + '00';
-    const fin = new Date(a.inicio.getTime() + 30 * 60000), regla = a.hasta ? 'RRULE:FREQ=DAILY;UNTIL=' + a.hasta.replace(/-/g, '') + 'T235959' : '';
+    const fin = new Date(a.inicio.getTime() + 30 * 60000), regla = a.diario ? 'RRULE:FREQ=DAILY' + (a.hasta ? ';UNTIL=' + a.hasta.replace(/-/g, '') + 'T235959' : '') : '';
     if (esAndroid()) {
         // Google Calendar no deja fijar el aviso por enlace: sale el que tenga cada uno por defecto y se cambia antes de guardar
         const url = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(a.titulo) +
@@ -606,7 +655,7 @@ function editarTarea(id) {
         <div class="dos"><div><label class="et">¿Cuándo?</label><select id="ta-repetir"><option value="diaria">Cada día</option><option value="semanal" ${t.repetir === 'semanal' ? 'selected' : ''}>Cada semana</option><option value="una" ${t.repetir === 'una' ? 'selected' : ''}>Una vez</option></select></div>
         <div><label class="et">Desde / día</label><input type="date" id="ta-fecha" value="${t.fecha}"></div></div>
         <div class="botones"><button class="btn pri" onclick="guardarTarea('${t.id}')">💾 Guardar</button><button class="btn" onclick="cerrarModal()">Cancelar</button></div>
-        ${id ? `<div class="botones"><button class="btn peligro" onclick="if(confirm('¿Borrar esta tarea?')){borrar('tareas','${t.id}');cerrarModal()}">🗑️ Borrar tarea</button></div>` : ''}`);
+        ${id ? `<div class="botones"><button class="btn peligro" onclick="if(confirm('¿Borrar esta tarea?')){const pid=borrar('tareas','${t.id}');cerrarModal();avisarDeshacer('🗑️ Borrada la tarea',pid)}">🗑️ Borrar tarea</button></div>` : ''}`);
 }
 function guardarTarea(id) {
     const titulo = document.getElementById('ta-titulo').value.trim();
@@ -784,7 +833,7 @@ function pintarExamen(id) {
         <div class="con-micro"><input id="ex-nb" value="${esc(x.notebook)}" placeholder="Enlace del cuaderno de este examen"><button onclick="abrirNotebook()">📓</button></div>
         <small class="ayuda">En NotebookLM, crea un cuaderno con el temario: hace resúmenes, preguntas y hasta un audio para repasar. Pega aquí su enlace y se abre con 📓.</small>
         <div class="dos"><div><label class="et">Fecha del examen</label><input type="date" id="ex-fecha" value="${x.fecha}"></div><div><label class="et">Nota sacada</label><input id="ex-nota" value="${esc(x.nota)}" placeholder="—" inputmode="decimal"></div></div>
-        <label class="et">Notas</label><textarea id="ex-notas" placeholder="Lo que dijo el profe, qué entra seguro…">${esc(x.notas)}</textarea>
+        <div class="et-micro"><label class="et">Notas</label><button type="button" onclick="dictar('ex-notas')">🎤 Dictar</button></div><textarea id="ex-notas" placeholder="Lo que dijo el profe, qué entra seguro…">${esc(x.notas)}</textarea>
         <div class="botones"><button class="btn pri" onclick="guardarExamen('${x.id}')">💾 Guardar y cerrar</button></div>
         <div class="botones"><button class="btn peligro" onclick="borrarExamen('${x.id}')">🗑️ Borrar examen</button></div>`;
 }
@@ -817,7 +866,7 @@ function guardarExamen(id) { guardar('examenes', camposExamen(D.examenes.find(y 
 function borrarExamen(id) {
     const x = D.examenes.find(y => y.id === id);
     if (!confirm(`¿Borrar el examen de ${x.asignatura}? (Las fotos se quedan en Drive)`)) return;
-    borrar('examenes', id); cerrarModal(); avisar('🗑️ Borrado');
+    const pid = borrar('examenes', id); cerrarModal(); avisarDeshacer('🗑️ Examen borrado', pid);
 }
 function resumenIA(x) {
     let t;
@@ -1181,16 +1230,322 @@ function avisar(t) {
     const a = document.createElement('div'); a.className = 'aviso'; a.textContent = t;
     document.body.appendChild(a); setTimeout(() => a.remove(), 2200);
 }
-// Dictar por voz (como en el calendario de 360)
+// ---------- 👈👉 HECHA Y BORRADA (como en 360) ----------
+// Deslizar una nota o tarea a la izquierda: ✓ hecha (o vuelve a pendiente), y queda quién la hizo. A la derecha: se
+// borra sin preguntar (si se repite, sí pregunta) y sale ↩️ Deshacer. Lo borrado va a la papelera, compartida con
+// la familia, y se puede recuperar durante 30 días desde «🗑️ Borrado hace poco».
+const PAPELERA_DE = ['eventos', 'tareas', 'examenes'];
+const PAPELERA_DIAS = 30;
+const tituloDe = (tabla, f) => tabla === 'examenes' ? 'Examen de ' + f.asignatura : f.titulo;
+const repiteX = x => !!x.repetir && x.repetir !== 'una';
+// Un hijo/a solo borra deslizando lo que es solo suyo y no sea una tarea de casa (las tareas las ponen los padres)
+function puedeBorrarDeslizando(tabla, x) {
+    if (esAdulto() || !cfg.yo) return true;
+    return tabla === 'eventos' && x.quien === cfg.yo;
+}
+let deslizar = null, deslizarAnularClic = false;
+const deslizarAbajo = e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const el = e.target.closest && e.target.closest('.item[data-tabla]');
+    if (!el || e.target.closest('.check')) return;
+    const x = (D[el.dataset.tabla] || []).find(y => y.id === el.dataset.id);
+    if (!x) return;
+    deslizar = { el, x, tabla: el.dataset.tabla, fecha: el.dataset.fecha, x0: e.clientX, y0: e.clientY, dx: 0, modo: null, id: e.pointerId, puedeBorrar: puedeBorrarDeslizando(el.dataset.tabla, x) };
+};
+const deslizarMover = e => {
+    const d = deslizar;
+    if (!d || e.pointerId !== d.id) return;
+    const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
+    if (!d.modo) {
+        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+        if (Math.abs(dy) > Math.abs(dx) || (dx > 0 && !d.puedeBorrar)) { deslizar = null; return; }   // es mover la lista, o no puede
+        d.modo = dx < 0 ? 'hecho' : 'borrar';
+        const el = d.el;
+        if (getComputedStyle(el.parentNode).position === 'static') el.parentNode.style.position = 'relative';
+        d.fondo = document.createElement('div'); d.fondo.className = 'item-fondo' + (d.modo === 'hecho' ? ' hecho' : '');
+        d.fondo.textContent = d.modo === 'borrar' ? '🗑️ Borrar' : estaHecho(d.x, d.fecha) ? '↩️ Pendiente' : '✓ Hecha';
+        Object.assign(d.fondo.style, { left: el.offsetLeft + 'px', top: el.offsetTop + 'px', width: el.offsetWidth + 'px', height: el.offsetHeight + 'px' });
+        el.parentNode.insertBefore(d.fondo, el);
+        el.classList.add('deslizando');
+        try { el.setPointerCapture(e.pointerId); } catch (x) {}
+    }
+    d.dx = d.modo === 'hecho' ? Math.min(0, dx) : Math.max(0, dx);
+    d.el.style.transform = `translateX(${d.dx}px)`;
+    d.fondo.classList.toggle('listo', Math.abs(d.dx) > d.el.offsetWidth * (d.modo === 'hecho' ? 0.3 : 0.5));
+};
+function deslizarSoltar(e) {
+    const d = deslizar;
+    if (!d || e.pointerId !== d.id) return;
+    deslizar = null;
+    if (!d.modo) return;
+    deslizarAnularClic = true; setTimeout(() => { deslizarAnularClic = false; }, 400);   // que no se abra la nota al soltar
+    const ancho = d.el.offsetWidth, quitar = () => { if (d.fondo) d.fondo.remove(); d.el.classList.remove('deslizando', 'volviendo'); d.el.style.transform = ''; };
+    const volver = () => { d.el.classList.add('volviendo'); d.el.style.transform = ''; setTimeout(quitar, 220); };
+    if (d.modo === 'hecho') {   // vuelve a su sitio y cambia
+        volver();
+        if (e.type !== 'pointercancel' && -d.dx > ancho * 0.3) setTimeout(() => marcar(d.tabla, d.x.id, d.fecha), 230);
+        return;
+    }
+    if (e.type === 'pointercancel' || d.dx <= ancho * 0.5) { volver(); return; }
+    if (repiteX(d.x) && !confirm(`«${tituloDe(d.tabla, d.x)}» se repite: se borran todas las veces. ¿Borrar?`)) { volver(); return; }
+    d.el.classList.add('volviendo'); d.el.style.transform = `translateX(${ancho + 20}px)`;
+    setTimeout(() => {
+        d.el.style.display = 'none'; if (d.fondo) d.fondo.remove();
+        const pid = borrar(d.tabla, d.x.id);
+        pintar(); avisarDeshacer('🗑️ Borrado: ' + tituloDe(d.tabla, d.x), pid);
+    }, 200);
+}
+// En iPhone el gesto con «pointer» no llega a borrar: allí se hace con los eventos de toque, y en cuanto se ve que es
+// deslizar de lado se frena el desplazamiento de la lista
+const deslizarIOS = esIOS();
+const deslizarToque = (e, t, tipo) => ({ clientX: t.clientX, clientY: t.clientY, pointerId: 'toque', pointerType: 'touch', button: 0, target: e.target, type: tipo });
+document.addEventListener('pointerdown', e => { if (!(deslizarIOS && e.pointerType === 'touch')) deslizarAbajo(e); });
+document.addEventListener('pointermove', e => { if (!(deslizarIOS && e.pointerType === 'touch')) deslizarMover(e); });
+document.addEventListener('pointerup', e => { if (!(deslizarIOS && e.pointerType === 'touch')) deslizarSoltar(e); });
+document.addEventListener('pointercancel', e => { if (!(deslizarIOS && e.pointerType === 'touch')) deslizarSoltar(e); });
+if (deslizarIOS) {
+    document.addEventListener('touchstart', e => { if (e.touches.length === 1) deslizarAbajo(deslizarToque(e, e.touches[0], 'pointerdown')); else deslizar = null; }, { passive: true });
+    document.addEventListener('touchmove', e => {
+        if (!deslizar || deslizar.id !== 'toque') return;
+        deslizarMover(deslizarToque(e, e.touches[0], 'pointermove'));
+        if (deslizar && deslizar.modo && e.cancelable) e.preventDefault();   // ya es borrar/hecha: que no se mueva la lista
+    }, { passive: false });
+    document.addEventListener('touchend', e => { const t = e.changedTouches[0]; if (t) deslizarSoltar(deslizarToque(e, t, 'pointerup')); });
+    document.addEventListener('touchcancel', e => { const t = e.changedTouches[0]; if (t) deslizarSoltar(deslizarToque(e, t, 'pointercancel')); });
+}
+document.addEventListener('click', e => { if (deslizarAnularClic) { e.stopPropagation(); e.preventDefault(); deslizarAnularClic = false; } }, true);
+
+// Aviso de abajo con ↩️ Deshacer (6 segundos)
+function avisarDeshacer(texto, pid) {
+    document.getElementById('aviso-deshacer')?.remove();
+    const a = document.createElement('div'); a.className = 'aviso'; a.id = 'aviso-deshacer';
+    a.innerHTML = `${esc(texto)} ${pid ? `<button class="btn-deshacer" onclick="recuperar('${pid}');this.parentNode.remove()">↩️ Deshacer</button>` : ''}`;
+    document.body.appendChild(a); setTimeout(() => a.remove(), 6000);
+}
+// Vuelve a poner lo borrado tal como estaba
+function recuperar(pid) {
+    const p = D.papelera.find(x => x.id === pid); if (!p) return;
+    let fila; try { fila = JSON.parse(p.fila); } catch (e) { avisar('⚠️ No se pudo recuperar'); return; }
+    guardar(p.tabla, fila); borrar('papelera', pid);
+    if (document.getElementById('lista-papelera')) verPapelera(); else pintar();
+    avisar('↩️ Recuperado: ' + p.titulo);
+}
+const papeleraVigente = () => D.papelera.filter(p => PAPELERA_DE.includes(p.tabla) && !(D[p.tabla] || []).some(x => x.id === p.ref))
+    .sort((a, b) => String(b.f).localeCompare(String(a.f)));
+function botonPapelera() {
+    const n = papeleraVigente().length;
+    return `<small class="ayuda" style="text-align:center;margin-top:14px">👈 Desliza a la izquierda: ✓ hecha · 👉 a la derecha: borrar</small>` +
+        (n ? `<button class="btn" style="width:100%;margin-top:8px;background:#fff" onclick="verPapelera()">🗑️ Borrado hace poco (${n})</button>` : '');
+}
+function verPapelera() {
+    const v = papeleraVigente();
+    const cuando = f => { const d = new Date(f); return isNaN(d) ? '' : (iso(d) === hoyIso() ? 'hoy' : nombreDia(iso(d))) + ' a las ' + dos(d.getHours()) + ':' + dos(d.getMinutes()); };
+    abrirModal(`<h3>🗑️ Borrado hace poco</h3><small class="ayuda" style="margin:0 0 10px">Lo borrado se puede recuperar durante ${PAPELERA_DIAS} días.</small><div id="lista-papelera">` +
+        (v.length ? v.map(p => {
+            const m = miembro(p.quien), puede = esAdulto() || !cfg.yo || p.quien === cfg.yo;
+            return `<div class="item" style="border-left-color:${m ? m.color : '#94a3b8'}"><div class="ico">${{ eventos: '📅', tareas: '⭐', examenes: '📝' }[p.tabla] || '🗑️'}</div>
+                <div class="txt"><div class="tit">${esc(p.titulo)}</div><div class="sub">${m ? 'Lo borró ' + esc(m.nombre) + ' · ' : ''}${cuando(p.f)}</div></div>
+                ${puede ? `<button class="btn-deshacer" onclick="recuperar('${p.id}')">↩️ Recuperar</button>` : ''}</div>`;
+        }).join('') : `<div class="vacio">No hay nada borrado</div>`) + `</div><div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button></div>`);
+}
+// Los móviles de los adultos vacían lo que lleva más de 30 días en la papelera
+function limpiarPapelera() {
+    if (!esAdulto()) return;
+    const limite = new Date(Date.now() - PAPELERA_DIAS * 864e5).toISOString();
+    D.papelera.filter(p => !p.f || p.f < limite || (D[p.tabla] || []).some(x => x.id === p.ref)).forEach(p => borrar('papelera', p.id));
+}
+
+// ---------- 🎤 DICTAR: el mismo micrófono que el «Dictar al calendario» de 360 ----------
+// Ventana con el micrófono grande. Escucha seguido (continuous) y, si el móvil corta al pararse a pensar, vuelve a
+// abrirse solo; deja de escuchar tras 8 s callado (12 s si aún no se ha dicho nada). «Seguir» pasa el texto a la casilla.
+// En iPhone el dictado de la web falla en la app instalada: se usa el 🎤 del teclado.
+const DICTADO_SILENCIO_MS = 8000, DICTADO_ESPERA_MS = 12000;
+let dcRec = null, dcCampo = '', dcUltimaVoz = 0, dcSilencio = null;
+const dcAbierto = () => !!document.getElementById('capa-dictado');
 function dictar(idCampo) {
-    const R = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!R) { avisar('🎤 Este móvil no deja dictar aquí: usa el micro del teclado'); return; }
-    const r = new R(); r.lang = 'es-ES'; r.interimResults = false;
-    const c = document.getElementById(idCampo);
-    avisar('🎤 Habla ahora…');
-    r.onresult = ev => { const t = ev.results[0][0].transcript; c.value = c.value ? c.value + ' ' + t : t.charAt(0).toUpperCase() + t.slice(1); };
-    r.onerror = () => avisar('🎤 No te he oído, prueba otra vez');
-    r.start();
+    dcCampo = idCampo;
+    const c = document.getElementById(idCampo), largo = c && c.tagName === 'TEXTAREA';
+    const capa = document.createElement('div');
+    capa.id = 'capa-dictado'; capa.className = 'fondo-modal'; capa.style.zIndex = 80;
+    capa.onclick = ev => { if (ev.target === capa) cerrarDictado(); };
+    capa.innerHTML = `<div class="modal"><div style="display:flex;align-items:center"><h3 style="flex:1;margin:0">🎤 Dictar</h3><button class="btn" style="flex:none;padding:8px 14px" onclick="cerrarDictado()">✕</button></div>
+        <button id="dc-micro" class="dc-micro" onclick="alternarDictado()" ${esIOS() ? 'style="display:none"' : ''}>🎤</button>
+        <div id="dc-estado" class="dc-estado"></div>
+        <textarea id="dc-texto" rows="${largo ? 5 : 3}" placeholder="Lo que digas sale aquí (también se puede escribir)">${esc(c ? c.value : '')}</textarea>
+        <div class="botones"><button class="btn pri" onclick="dictadoACampo()">Seguir ›</button></div></div>`;
+    document.body.appendChild(capa);
+    if ((window.SpeechRecognition || window.webkitSpeechRecognition) && !esIOS()) empezarDictado();
+    else dictarConTeclado();
+}
+function dictarConTeclado() {
+    const caja = document.getElementById('dc-texto'), est = document.getElementById('dc-estado');
+    caja.focus(); est.style.color = '';
+    est.textContent = esIOS() ? 'Toca el 🎤 del teclado (abajo) y habla. Si no sale: Ajustes › General › Teclado › Activar Dictado.'
+        : 'Toca la casilla, usa el 🎤 del teclado y pulsa Seguir.';
+}
+function cerrarDictado() { pararDictado(); clearInterval(dcSilencio); document.getElementById('capa-dictado')?.remove(); }
+function alternarDictado() { if (esIOS()) dictarConTeclado(); else if (dcRec) pararDictado(); else empezarDictado(); }
+function pararDictado() { if (dcRec) { const r = dcRec; dcRec = null; r.stop(); } }
+function empezarDictado(sigue) {
+    const Reconocedor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const caja = document.getElementById('dc-texto'), est = document.getElementById('dc-estado'), boton = document.getElementById('dc-micro');
+    if (!caja) return;
+    if (!sigue && Reconocedor) {
+        dcUltimaVoz = Date.now(); clearInterval(dcSilencio);
+        const habia = caja.value.trim();
+        dcSilencio = setInterval(() => {
+            if (!dcRec) { clearInterval(dcSilencio); return; }
+            const dicho = caja.value.trim() !== habia;
+            if (Date.now() - dcUltimaVoz > (dicho ? DICTADO_SILENCIO_MS : DICTADO_ESPERA_MS)) { clearInterval(dcSilencio); pararDictado(); }
+        }, 300);
+    }
+    if (!Reconocedor) { dictarConTeclado(); return; }
+    // Algunos Android repiten en cada trozo lo anterior ("buenas" + "buenas tardes"): si un trozo empieza por lo ya
+    // juntado, lo sustituye en vez de añadirse
+    const rec = new Reconocedor();
+    rec.lang = 'es-ES'; rec.continuous = true; rec.interimResults = true;
+    const inicio = caja.value ? caja.value.replace(/\s*$/, ' ') : '';
+    let fallo = false, nuevo = false;
+    rec.onresult = ev => {
+        let frase = '';
+        for (let i = 0; i < ev.results.length; i++) {
+            const t = ev.results[i][0].transcript.trim();
+            if (!t) continue;
+            frase = frase && t.toLowerCase().startsWith(frase.toLowerCase()) ? t : (frase + ' ' + t).trim();
+        }
+        if (frase.trim()) { nuevo = true; dcUltimaVoz = Date.now(); }
+        const todo = inicio + frase.trim();
+        caja.value = todo.charAt(0).toUpperCase() + todo.slice(1);
+    };
+    rec.onerror = ev => {
+        if (ev.error === 'no-speech' || ev.error === 'aborted') return;
+        fallo = true;
+        est.textContent = ev.error === 'not-allowed' ? 'Hay que dar permiso al micrófono.' : ev.error === 'audio-capture' ? 'El micrófono no responde: toca la casilla y usa el 🎤 del teclado.' : 'No se entendió (' + ev.error + '). Toca el micrófono y repite.';
+    };
+    rec.onend = () => {
+        const aMano = dcRec !== rec;   // se paró tocando el micrófono, Seguir o la X (o tras el rato callado)
+        dcRec = null;
+        boton.classList.remove('escuchando');
+        if (fallo) return;
+        if (dcAbierto() && !aMano && !nuevo) {
+            empezarDictado(true); est.textContent = caja.value.trim() ? 'Sigo escuchando... Cuando acabes, pulsa SEGUIR.' : 'Escuchando... habla ahora'; return;
+        }
+        if (!caja.value.trim()) { est.textContent = 'No he oído nada. Toca el micrófono y habla.'; return; }
+        // El móvil corta en cuanto uno se para a pensar: se sigue escuchando y se añade a lo anterior hasta pulsar SEGUIR
+        if (!dcAbierto()) return;
+        if (nuevo && !aMano) { empezarDictado(true); est.textContent = 'Sigo escuchando... Cuando acabes, pulsa SEGUIR.'; }
+        else est.textContent = 'Revisa el texto y pulsa SEGUIR. Para añadir más, toca el micrófono.';
+    };
+    dcRec = rec;
+    boton.classList.add('escuchando');
+    est.textContent = 'Escuchando... habla ahora';
+    try { rec.start(); } catch (e) { dcRec = null; boton.classList.remove('escuchando'); est.textContent = 'No se pudo abrir el micrófono.'; }
+}
+function dictadoACampo() {
+    const txt = document.getElementById('dc-texto').value.trim(), c = document.getElementById(dcCampo);
+    cerrarDictado();
+    if (c) { c.value = txt; c.dispatchEvent(new Event('input')); }
+}
+
+// ---------- 📢 ALTAVOZ (como el de 360): anuncios que salen al abrir la app y recordatorios de cada día ----------
+// Lo ponen los adultos. Anuncio: sale una vez en cada móvil al abrir la app y se queda arriba en «Hoy» 1 día, 3 días…
+// Recordatorio: cada día a su hora sale en la app (y arriba en «Hoy» hasta medianoche). Para que suene con la app
+// cerrada, cada uno lo pasa a su Reloj o a su calendario con «⏰ Ponerme la alarma».
+const anVistos = () => leerLS('af_anuncios_vistos', {});
+const paraMi = a => !a.para || !cfg.yo || lista(a.para).includes(cfg.yo);
+const anuncioVivo = a => a.tipo === 'recordatorio' ? (!a.hasta || a.hasta >= hoyIso()) : !!(a.caduca && new Date(a.caduca) > new Date());
+const horaAhora = () => dos(new Date().getHours()) + ':' + dos(new Date().getMinutes());
+const recordatorioYa = a => a.tipo === 'recordatorio' && (a.hora || '00:00') <= horaAhora();
+function anunciosParaMi() { return D.anuncios.filter(a => anuncioVivo(a) && paraMi(a)); }
+function tarjetasAnuncios() {
+    const v = anunciosParaMi().filter(a => a.tipo !== 'recordatorio' || recordatorioYa(a));
+    return v.map(a => `<div class="anuncio ${a.tipo === 'recordatorio' ? 'rec' : ''}" onclick="verAnuncio('${a.id}')"><div class="ico">${a.tipo === 'recordatorio' ? '⏰' : '📢'}</div>
+        <div class="tx">${esc(a.texto.length > 200 ? a.texto.slice(0, 200) + '…' : a.texto)}<div class="sub">${anuncioSub(a)}</div></div></div>`).join('');
+}
+function anuncioSub(a) {
+    const de = miembro(a.quien)?.nombre || '';
+    if (a.tipo === 'recordatorio') return `Cada día a las ${a.hora}${a.hasta ? ' hasta el ' + deIso(a.hasta).getDate() + ' de ' + MESES[deIso(a.hasta).getMonth()] : ''}${de ? ' · ' + esc(de) : ''}`;
+    const c = new Date(a.caduca);
+    return `${de ? esc(de) + ' · ' : ''}hasta el ${c.getDate()} de ${MESES[c.getMonth()]}`;
+}
+// Sale solo: el anuncio, una vez en cada móvil (no a quien lo escribió); el recordatorio, una vez al día al llegar su hora
+function mirarAnuncios() {
+    if (document.querySelector('.fondo-modal')) return;
+    const vistos = anVistos(), hoy = hoyIso();
+    const a = anunciosParaMi().find(x => x.tipo === 'recordatorio' ? recordatorioYa(x) && vistos[x.id] !== hoy : !vistos[x.id] && (!cfg.yo || x.quien !== cfg.yo));
+    if (!a) return;
+    if (a.tipo === 'recordatorio' && navigator.vibrate) navigator.vibrate([300, 150, 300]);
+    verAnuncio(a.id);
+}
+function verAnuncio(id) {
+    const a = D.anuncios.find(x => x.id === id); if (!a) return;
+    const vistos = anVistos(); vistos[a.id] = a.tipo === 'recordatorio' ? hoyIso() : '1';
+    // Que la lista de vistos no crezca para siempre
+    Object.keys(vistos).forEach(k => { if (!D.anuncios.some(x => x.id === k)) delete vistos[k]; });
+    guardarLS('af_anuncios_vistos', vistos);
+    const rec = a.tipo === 'recordatorio';
+    abrirModal(`<div style="text-align:center;font-size:46px">${rec ? '⏰' : '📢'}</div><h3 style="text-align:center">${rec ? 'Recordatorio' : 'Anuncio'}</h3>
+        <div class="grande-aviso">${esc(a.texto)}</div><small class="ayuda">${anuncioSub(a)}</small>
+        <div class="botones"><button class="btn pri" onclick="cerrarModal()">Entendido</button>${rec ? `<button class="btn" onclick="alarmaAnuncio('${a.id}')">⏰ Ponerme la alarma</button>` : ''}</div>
+        ${esAdulto() ? `<div class="botones"><button class="btn" onclick="escribirAnuncio('${a.id}')">✏️ Corregir</button><button class="btn peligro" onclick="quitarAnuncio('${a.id}')">🗑️ Quitar</button></div>` : ''}`);
+}
+function alarmaAnuncio(id) {
+    const a = D.anuncios.find(x => x.id === id); if (!a) return;
+    let fecha = hoyIso(); if (recordatorioYa(a)) fecha = sumarDias(fecha, 1);
+    abrirAviso({ titulo: a.texto.length > 60 ? a.texto.slice(0, 57) + '…' : a.texto, fecha, hora: a.hora, notas: a.texto, hasta: a.hasta || '', cadaDia: true });
+}
+// Ventana del altavoz: lo que hay puesto y los botones para poner algo nuevo
+function abrirAltavoz() {
+    const v = D.anuncios.filter(anuncioVivo);
+    abrirModal(`<h3>📢 Altavoz</h3>
+        <div class="botones" style="margin-top:0"><button class="btn pri" style="background:#7c3aed" onclick="escribirAnuncio(null,'anuncio')">📢 Anuncio</button><button class="btn pri" style="background:#f57c00" onclick="escribirAnuncio(null,'recordatorio')">⏰ Recordatorio diario</button></div>
+        <small class="ayuda">📢 <b>Anuncio</b>: algo importante que todos ven al abrir la app (1 día, 3 días…).<br>⏰ <b>Recordatorio</b>: una tarea que salta todos los días a la misma hora.</small>
+        <h2>Puesto ahora</h2>` + (v.length ? v.map(a => `<div class="anuncio ${a.tipo === 'recordatorio' ? 'rec' : ''}" onclick="escribirAnuncio('${a.id}')"><div class="ico">${a.tipo === 'recordatorio' ? '⏰' : '📢'}</div>
+        <div class="tx">${esc(a.texto)}<div class="sub">${anuncioSub(a)} · ${a.para ? miembrosDe(a.para).map(m => esc(m.nombre)).join(', ') : 'para todos'}</div></div>✏️</div>`).join('') : `<div class="vacio">No hay nada puesto</div>`) +
+        `<div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button></div>`);
+}
+function escribirAnuncio(id, tipo) {
+    const a = id ? D.anuncios.find(x => x.id === id) : { id: '', tipo, texto: '', para: '', hora: '20:00', hasta: '', caduca: '' };
+    if (!a) return;
+    const rec = a.tipo === 'recordatorio';
+    // Al corregir un anuncio, queda marcada la duración más parecida a lo que le queda
+    const quedan = a.caduca ? Math.max(1, Math.round((new Date(a.caduca) - Date.now()) / 864e5)) : 3;
+    const dias = [1, 3, 7, 30].reduce((m, d) => Math.abs(d - quedan) < Math.abs(m - quedan) ? d : m, 3);
+    abrirModal(`<h3>${rec ? '⏰ Recordatorio diario' : '📢 Anuncio para la familia'}</h3>
+        <div class="et-micro"><label class="et">${rec ? 'Qué hay que hacer' : 'Qué queréis avisar'}</label><button type="button" onclick="dictar('an-texto')">🎤 Dictar</button></div>
+        <textarea id="an-texto" maxlength="1000" placeholder="${rec ? 'Sacar al perro, tomar la medicina, preparar la mochila…' : 'Escribe el anuncio o pulsa 🎤 Dictar y dilo en voz alta'}">${esc(a.texto)}</textarea>
+        <label class="et">Para quién</label>${chipsQuien(lista(a.para), true)}
+        ${rec ? `<div class="dos"><div><label class="et">A qué hora</label><input type="time" id="an-hora" value="${a.hora || '20:00'}"></div>
+            <div><label class="et">Hasta (si acaba)</label><input type="date" id="an-hasta" value="${a.hasta || ''}"></div></div>
+            <small class="ayuda">Sale en la app cada día a esa hora. Para que suene con el móvil bloqueado, que cada uno pulse «⏰ Ponerme la alarma» al verlo.</small>`
+        : `<label class="et">Se ve durante</label><select id="an-dias">${[[1, '1 día'], [3, '3 días'], [7, '1 semana'], [30, '1 mes']].map(([d, t]) => `<option value="${d}" ${d === dias ? 'selected' : ''}>${t}</option>`).join('')}</select>`}
+        <small class="ayuda" id="an-estado"></small>
+        <div class="botones"><button class="btn pri" style="background:${rec ? '#f57c00' : '#7c3aed'}" onclick="publicarAnuncio('${a.id}','${a.tipo}')">📢 Publicar</button>${id ? `<button class="btn peligro" onclick="quitarAnuncio('${a.id}')">🗑️ Quitar</button>` : ''}</div>
+        <div class="botones"><button class="btn" onclick="abrirAltavoz()">‹ Volver</button></div>`);
+}
+function publicarAnuncio(id, tipo) {
+    const texto = val('an-texto'), est = document.getElementById('an-estado');
+    if (texto.replace(/[^\p{L}\p{N}]/gu, '').length < 3) { est.textContent = '✍️ Escribe o dicta primero qué hay que avisar.'; return; }
+    const viejo = id ? D.anuncios.find(x => x.id === id) : null;
+    // Si se corrige el texto, se le da otro id: así a todos les vuelve a salir
+    const nuevoTexto = !viejo || viejo.texto !== texto;
+    const a = { id: nuevoTexto ? nuevoId() : id, tipo, texto, quien: cfg.yo || '', para: quienElegido(), hora: '', hasta: '', caduca: '' };
+    if (tipo === 'recordatorio') {
+        a.hora = val('an-hora'); a.hasta = val('an-hasta');
+        if (!a.hora) { est.textContent = '🕒 Pon a qué hora tiene que saltar.'; return; }
+        if (a.hasta && a.hasta < hoyIso()) { est.textContent = '📅 La fecha «hasta» ya ha pasado.'; return; }
+    } else a.caduca = new Date(Date.now() + Number(val('an-dias')) * 864e5).toISOString();
+    if (viejo && nuevoTexto) borrar('anuncios', viejo.id);
+    guardar('anuncios', a);
+    // A quien lo escribe no le sale (el recordatorio de hoy sí, si su hora aún no ha llegado)
+    const vistos = anVistos(); vistos[a.id] = tipo === 'recordatorio' ? (recordatorioYa(a) ? hoyIso() : '') : '1'; guardarLS('af_anuncios_vistos', vistos);
+    cerrarModal();
+    avisar(tipo === 'recordatorio' ? '⏰ Recordatorio puesto' : '📢 Anuncio publicado: lo verán al abrir la app');
+    if (tipo === 'recordatorio') setTimeout(() => { if (confirm('¿Te pongo también la alarma en este móvil?')) alarmaAnuncio(a.id); }, 300);
+}
+function quitarAnuncio(id) {
+    if (!confirm('¿Quitar este aviso? Ya no le saldrá a nadie.')) return;
+    borrar('anuncios', id); cerrarModal(); avisar('🗑️ Quitado');
 }
 
 // ---------- Aviso de versión nueva (como en 360): version.json junto a la app ----------
@@ -1226,7 +1581,11 @@ if (miembro(cfg.yo)?.rol === 'hijo') filtro = cfg.yo;
 pintar();
 sincronizar();
 setTimeout(mirarVersionNueva, 3000);
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { sincronizar(); mirarVersionNueva(); pintar(); } });
+setTimeout(mirarAnuncios, 800);
+setTimeout(limpiarPapelera, 5000);
+// Cada minuto, por si llega la hora de un recordatorio con la app abierta
+setInterval(() => { if (document.visibilityState === 'visible') { mirarAnuncios(); if (vista === 'hoy' && !document.querySelector('.fondo-modal')) pintar(); } }, 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { sincronizar(); mirarVersionNueva(); pintar(); mirarAnuncios(); } });
 setInterval(() => { if (document.visibilityState === 'visible' && !document.querySelector('.fondo-modal')) sincronizar(); }, 120000);
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {});
